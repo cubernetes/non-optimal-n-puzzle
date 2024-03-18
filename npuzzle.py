@@ -401,7 +401,7 @@ class Puzzle:
             raise SystemExit(exit_code)
 
     def move(self, moves: str) -> None:
-        """Perform moves sequentially provided as each character of :moves.
+        """Perform moves (swaps with the emtpy tile) sequentially, provided as each character of :moves.
         Takes O(moves).
         """
         r, c = self.empty_row, self.empty_col
@@ -474,56 +474,78 @@ class Puzzle:
     #     r, c = divmod(tile_idx, self.size)
     #     return self.puzzle[r][c] == tile
 
-    def move_tile_top(self, tile: int) -> None:
-        """Move a tile 1 position to the top.
+    def move_vertically_using_right(self, tile: int) -> bool:
+        """Return True if the immediate right position of the tile to be moved
+        is ideal/necessary for vertical movement, False otherwise.
         Requires that the puzzle is solved top-to-bottom, left-to-right and
         requires at least 2 unsolved rows below the row where the tile is
         supposed to be inserted.
         """
-        self.focus_tile_top(tile)
 
-    def move_tile_bottom(self, tile: int) -> None:
-        """Move a tile 1 position to the bottom.
+    def move_horizontally_using_bottom(self, tile: int) -> bool:
+        """Return True if the immediate top position of the tile to be moved
+        is ideal/necessary for horizontal movement, False otherwise.
         Requires that the puzzle is solved top-to-bottom, left-to-right and
         requires at least 2 unsolved rows below the row where the tile is
         supposed to be inserted.
         """
-        self.focus_tile_bottom(tile)
-
-    def move_tile_left(self, tile: int) -> None:
-        """Move a tile 1 position to the left.
-        Requires that the puzzle is solved top-to-bottom, left-to-right and
-        requires at least 2 unsolved rows below the row where the tile is
-        supposed to be inserted.
-        """
-        self.focus_tile_left(tile)
-
-    def move_tile_right(self, tile: int) -> None:
-        """Move a tile 1 position to the right.
-        Requires that the puzzle is solved top-to-bottom, left-to-right and
-        requires at least 2 unsolved rows below the row where the tile is
-        supposed to be inserted.
-        """
-        self.focus_tile_right(tile)
 
     def align_tile_horizontally(self, tile: int, tile_real_col: int, tile_correct_col: int) -> None:
         """Move tile left or right until it reaches :tile_correct_col
         """
+        if self.move_horizontally_using_bottom(tile):
+            if tile_real_col < tile_correct_col:
+                repositioning_moves = 'drru'
+            else:
+                repositioning_moves = 'dllu'
+        else:
+            if tile_real_col < tile_correct_col:
+                repositioning_moves = 'urrd'
+            else:
+                repositioning_moves = 'ulld'
+        first = True
         while tile_real_col < tile_correct_col:
-            self.move_tile_right(tile)
+            if first:
+                self.focus_tile_right(tile)
+            else:
+                self.move(repositioning_moves)
+            self.move('l')
             tile_real_col += 1
         while tile_real_col > tile_correct_col:
-            self.move_tile_left(tile)
+            if first:
+                self.focus_tile_left(tile)
+            else:
+                self.move(repositioning_moves)
+            self.move('r')
             tile_real_col -= 1
 
     def align_tile_vertically(self, tile: int, tile_real_row: int, tile_correct_row: int) -> None:
         """Move tile top or down until it reaches :tile_correct_row
         """
+        if self.move_vertically_using_right(tile):
+            if tile_real_row < tile_correct_row:
+                repositioning_moves = 'rddl'
+            else:
+                repositioning_moves = 'ruul'
+        else:
+            if tile_real_row < tile_correct_row:
+                repositioning_moves = 'lddr'
+            else:
+                repositioning_moves = 'luur'
+        first = True
         while tile_real_row < tile_correct_row:
-            self.move_tile_bottom(tile)
+            if first:
+                self.focus_tile_bottom(tile)
+            else:
+                self.move(repositioning_moves)
+            self.move('u')
             tile_real_row += 1
         while tile_real_row > tile_correct_row:
-            self.move_tile_top(tile)
+            if first:
+                self.focus_tile_top(tile)
+            else:
+                self.move(repositioning_moves)
+            self.move('d')
             tile_real_row -= 1
 
     def solve_row_n_minus_2_tiles(self, row: int) -> None:
