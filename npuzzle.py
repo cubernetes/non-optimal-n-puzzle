@@ -282,6 +282,7 @@ class Puzzle:
             *,
             print_after_move: bool = False,
             debug: bool = False,
+            delay: float = .5,
         ):
         """Initialize puzzle, determine solvability and find empty tile
         Takes O(n**4) (self._is_solvable()).
@@ -296,6 +297,7 @@ class Puzzle:
         self.file = file
         self.print_after_move = print_after_move
         self.debug = debug
+        self.delay = delay
         self.puzzle = self._parse_puzzle()
         self.is_solvable = self._is_solvable()
         self.size = len(self.puzzle)
@@ -430,7 +432,7 @@ class Puzzle:
         """
         r, c = self.empty_row, self.empty_col
         for move in moves:
-            time.sleep(.3)
+            time.sleep(self.delay)
             try:
                 if move == 'd':
                     self.puzzle[r][c], self.puzzle[r+1][c] = self.puzzle[r+1][c], self.puzzle[r][c]
@@ -753,7 +755,7 @@ class Puzzle:
         self.solve_last_2_rows()
 
 if __name__ == '__main__':
-    puzzle = Puzzle(open(0), print_after_move=True, debug=True)
+    puzzle = Puzzle(open(0), print_after_move=False, debug=False, delay=.1)
     elapsed_seconds = timeit.timeit('puzzle.solve()', globals=globals(), number=1)
     print(f'Elapsed seconds: {elapsed_seconds:.6f}')
     print('Solution:')
