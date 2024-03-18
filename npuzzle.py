@@ -395,14 +395,16 @@ class Puzzle:
         if tile == 0.
         Takes O(n**2).
         """
-        for row in self.puzzle:
-            for col in row:
+        for i, row in enumerate(self.puzzle):
+            for j, col in enumerate(row):
                 if col == tile:
-                    print(end=f'\033\x5b30;42m{col: >2} \033\x5bm')
-                elif col != 0:
-                    print(end=f'{col: >2} ')
+                    print(end=f'\033\x5b30;43m{col: >4} \033\x5bm')
+                elif col == i * self.size + j + 1:
+                    print(end=f'\033\x5b30;42m{col: >4} \033\x5bm')
+                elif col == 0:
+                    print(end=f'\033\x5b30;41m{col: >4} \033\x5bm')
                 else:
-                    print(end=f'\033\x5b30;41m{col: >2} \033\x5bm')
+                    print(end=f'{col: >4} ')
             print()
         print()
 
@@ -452,6 +454,7 @@ class Puzzle:
                     self.error(f'Unknown move "{move}".', 8)
                 self.moves.append(move)
                 if self.print_after_move:
+                    print('\033\x5bH\033\x5b2J\033\x5b3J')
                     self.print_puzzle(tile=tile)
             except IndexError as err:
                 self.error(f'{move=}, {r=}, {c=}, {err=}\n', 9)
@@ -833,7 +836,7 @@ class Puzzle:
 if __name__ == '__main__':
     puzzle = Puzzle(open(0), print_after_move=False, delay=0)
     elapsed_seconds = timeit.timeit('puzzle.solve()', globals=globals(), number=1)
-    print(f'Elapsed seconds: {elapsed_seconds:.6f}')
-    print('Solution:')
+    # print(f'Elapsed seconds: {elapsed_seconds:.6f}')
+    # print('Solution:')
     # puzzle.print_moves()
     print(len(puzzle.moves))
