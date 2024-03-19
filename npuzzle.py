@@ -110,7 +110,8 @@ class Puzzle:
             for c in row:
                 if c != 0:
                     flat_puzzle.append(c)
-                else:
+                else: # interpret the empty tile (0) as having the square value
+                      # this way, number of inversions is 0 for the solved state
                     flat_puzzle.append(self.size ** 2)
         empty_idx = flat_puzzle.index(self.size ** 2)
         row = empty_idx // self.size
@@ -454,7 +455,7 @@ class Puzzle:
             self.align_tile_vertically(tile, tile_real_row_col, tile_target_row_col, repositioning_moves_vertical)
 
     @debug
-    def get_tiles(self, row: int) -> tuple[int, list[int], list[int], int, list[int], list[int]]:
+    def get_last_2_row_tiles(self, row: int) -> tuple[int, list[int], list[int], int, list[int], list[int]]:
         """Return the indices, rows and columns of the penultimate and ultimate (last) tiles in the :row.
         """
         P = (row + 1) * self.size - 1 # == Penultimate Tile Index
@@ -462,7 +463,7 @@ class Puzzle:
         # mutable list needed to pass it down to funcs as ref without creating bloated object or creating non-generic methods
         PR = list(self._get_tile_pos(P)) # Penultimate Tile Real Row & Col
 
-        L = (row + 1) * self.size # == Last Tile Index
+        L = P + 1 # == Last Tile Index
         LT = list(divmod(L - 1 if L != 0 else self.size ** 2 - 1, self.size)) # Last Tile Target Row & Col
         # see comment above
         LR = list(self._get_tile_pos(L)) # Last Tile Real Row & Col
@@ -615,7 +616,7 @@ class Puzzle:
         """Solve last 2 tiles of a particular :row.
         Requires that all previous tiles in that row are solved.
         """
-        P, PT, PR, L, LT, LR = self.get_tiles(row) # if python only had zero-cost abstrations...
+        P, PT, PR, L, LT, LR = self.get_last_2_row_tiles(row) # if python only had zero-cost abstrations...
 
         if PR == LT and \
            LR == PT: # last 2 tiles are swapped?
@@ -644,10 +645,44 @@ class Puzzle:
             self.solve_row_last_2_tiles(row)
 
     @debug
+    def get_top_and_bottom_tiles(self, col: int) -> tuple[int, list[int], list[int], int, list[int], list[int]]:
+        """Return the indices, rows and columns of the top and bottom (last) tiles in the :col
+        (applies for the last two rows).
+        """
+        T = self.size * (self.size - 2) + 1 + col # Top Tile Index
+        TT = list(divmod(T - 1 if T != 0 else self.size ** 2 - 1, self.size)) # Top Tile Target Row & Col
+        # mutable list needed to pass it down to funcs as ref without creating bloated object or creating non-generic methods
+        TR = list(self._get_tile_pos(T)) # Top Tile Real Row & Col
+
+        B = T + self.size # Bottom Tile Index
+        BT = list(divmod(B - 1 if B != 0 else self.size ** 2 - 1, self.size)) # Bottom Tile Target Row & Col
+        # see comment above
+        BR = list(self._get_tile_pos(B)) # Bottom Tile Real Row & Col
+
+        # E == empty tile
+
+        return T, TT, TR, B, BT, BR
+
+    # TODO: Not working!
+    @debug
     def solve_last_2_rows_col(self, col: int) -> None:
         """Solve a particular :col from the last 2 rows.
         Requires that all previous columns in the last 2 rows are solved.
         """
+        T, TT, TR, B, BT, BR = self.get_top_and_bottom_tiles(col)
+
+        self.focus_tile_right(TR)
+        repositioning_moves_vertical = self.get_vertical_repositioning_moves(TR, TT)
+        TT[0] += 1
+        self.align_tile_vertically(T, TR, TT, repositioning_moves_vertical)
+        repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(TR, TT)
+        self.align_tile_horizontally(T, TR, TT, repositioning_moves_horizontal)
+
+        repositioning_moves_vertical = self.get_vertical_repositioning_moves(BR, BT)
+        BT[1] += 1
+        self.align_tile_vertically(B, BR, BT, repositioning_moves_vertical)
+        repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(BR, BT)
+        self.align_tile_horizontally(B, BR, BT, repositioning_moves_horizontal)
 
     @debug
     def solve_last_2_rows_n_minus_2_cols(self) -> None:
@@ -688,10 +723,14 @@ class Puzzle:
 if __name__ == '__main__':
     puzzle = Puzzle(open(0), print_after_move=True, delay=0)
     elapsed_seconds = timeit.timeit('puzzle.solve()', globals=globals(), number=1)
-    # print(f'Elapsed seconds: {elapsed_seconds:.6f}')
-    # print('Solution:')
-    # puzzle.print_moves()
-    # print(len(puzzle.moves))
-    if len(puzzle.moves) > 0:
-        raise SystemExit(0)
-    raise SystemExit(1)
+
+    print(f'Elapsed seconds: {elapsed_seconds:.6f}')
+    print('Solution:')
+    puzzle.print_moves()
+    print(len(puzzle.moves))
+
+    if len(puzzle.moves) == 0 and puzzle.is_solvable:
+        raise SystemExit(1)
+    elif not puzzle.is_solvable:
+        raise SystemExit(2)
+    raise SystemExit(0)
