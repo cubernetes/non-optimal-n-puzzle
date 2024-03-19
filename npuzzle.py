@@ -53,7 +53,7 @@ class Puzzle:
         self.empty_col = empty_pos[1]
         self.moves = []
 
-        if self.print_after_move or True:
+        if self.print_after_move:
             print('\033\x5b30;42mInitial puzzle:\033\x5bm')
             self.print_puzzle()
 
@@ -784,13 +784,14 @@ class Puzzle:
         self.solve_last_2_rows()
 
 if __name__ == '__main__':
-    puzzle = Puzzle(open(0), print_after_move=True, clear_before_print=False, delay=0)
+    puzzle = Puzzle(open(0), print_after_move=False, clear_before_print=False, delay=0)
     elapsed_seconds = timeit.timeit('puzzle.solve()', globals=globals(), number=1)
 
-    print(f'Elapsed seconds: {elapsed_seconds:.6f}')
-    print('Solution:')
-    puzzle.print_moves()
-    print(len(puzzle.moves))
+    # print(f'Elapsed seconds: {elapsed_seconds:.6f}')
+    print(f'Time: {elapsed_seconds:.6f}s, Moves: {len(puzzle.moves)}', file=sys.stderr, flush=True)
+    # print('Solution:')
+    print(''.join(puzzle.moves))
+    # print(len(puzzle.moves))
 
     if len(puzzle.moves) == 0 and puzzle.is_solvable:
         raise SystemExit(1)
