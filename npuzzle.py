@@ -44,14 +44,14 @@ class Puzzle:
         self.print_after_move = print_after_move
         self.delay = delay
         self.puzzle = self._parse_puzzle()
-        self.is_solvable = self._is_solvable()
         self.size = len(self.puzzle)
+        self.is_solvable = self._is_solvable()
         empty_pos: tuple[int, int] = self._get_tile_pos(0)
         self.empty_row = empty_pos[0]
         self.empty_col = empty_pos[1]
         self.moves = []
 
-        if self.print_after_move:
+        if self.print_after_move or True:
             print('\033\x5b30;42mInitial puzzle:\033\x5bm')
             self.print_puzzle()
 
@@ -108,16 +108,22 @@ class Puzzle:
         flat_puzzle = []
         for row in self.puzzle:
             for c in row:
-                flat_puzzle.append(c)
+                if c != 0:
+                    flat_puzzle.append(c)
+                else:
+                    flat_puzzle.append(self.size ** 2)
+        empty_idx = flat_puzzle.index(self.size ** 2)
+        row = empty_idx // self.size
+        col = empty_idx % self.size
+
         n_inversions = 0
         for i in range(0, len(flat_puzzle)):
             for j in range(i + 1, len(flat_puzzle)):
                 if flat_puzzle[i] > flat_puzzle[j]:
                     n_inversions += 1
-        empty_idx = flat_puzzle.index(0)
-        row = empty_idx % len(self.puzzle)
-        col = empty_idx // len(self.puzzle)
-        return (row + col + n_inversions) % 2 == 1
+        manhatten_to_bottom_right = (self.size - row - 1) + (self.size - col - 1)
+        puzzle_parity = (manhatten_to_bottom_right + n_inversions) % 2
+        return puzzle_parity == 0
 
     @debug
     def _get_tile_pos(self, tile: int) -> tuple[int, int]:
@@ -140,7 +146,7 @@ class Puzzle:
         if tile == 0.
         Takes O(n**2).
         """
-        print('\033\x5bH\033\x5b2J\033\x5b3J')
+        # print('\033\x5bH\033\x5b2J\033\x5b3J')
         for i, row in enumerate(self.puzzle):
             for j, col in enumerate(row):
                 if col == tile:
@@ -596,6 +602,15 @@ class Puzzle:
             self.case_P_solved_L_anywhere(P, L, PR, LR, PT, LT)
 
     @debug
+    def case_P_in_target_of_L_and_empty_in_PT(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
+        """Transform the case where the empty tile is in the target position of the
+        penultimate tile and the penultimate tile is in the target position of the
+        last tile to the case where the penultimate tile is solved.
+        """
+        self.move('r')
+        PR[1] -= 1
+
+    @debug
     def solve_row_last_2_tiles(self, row: int) -> None:
         """Solve last 2 tiles of a particular :row.
         Requires that all previous tiles in that row are solved.
@@ -604,7 +619,10 @@ class Puzzle:
 
         if PR == LT and \
            LR == PT: # last 2 tiles are swapped?
-               self.case_P_and_L_swapped(P, L, PR, LR, PT, LT) # always passing 6 vars to avoid deconstructing them all the time
+            self.case_P_and_L_swapped(P, L, PR, LR, PT, LT) # always passing 6 vars to avoid deconstructing them all the time
+        elif [self.empty_row, self.empty_col] == PT and \
+             PR == LT: # empty tile in target of P and P in target of L?
+            self.case_P_in_target_of_L_and_empty_in_PT(P, L, PR, LR, PT, LT)
 
         if PR == PT: # P is in correct position?
             self.case_P_solved(P, L, PR, LR, PT, LT)
@@ -668,12 +686,12 @@ class Puzzle:
         self.solve_last_2_rows()
 
 if __name__ == '__main__':
-    puzzle = Puzzle(open(0), print_after_move=False, delay=0)
+    puzzle = Puzzle(open(0), print_after_move=True, delay=0)
     elapsed_seconds = timeit.timeit('puzzle.solve()', globals=globals(), number=1)
-    print(f'Elapsed seconds: {elapsed_seconds:.6f}')
-    print('Solution:')
-    puzzle.print_moves()
-    print(len(puzzle.moves))
-    if len(puzzle.moves):
+    # print(f'Elapsed seconds: {elapsed_seconds:.6f}')
+    # print('Solution:')
+    # puzzle.print_moves()
+    # print(len(puzzle.moves))
+    if len(puzzle.moves) > 0:
         raise SystemExit(0)
     raise SystemExit(1)

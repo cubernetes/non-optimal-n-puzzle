@@ -34,6 +34,9 @@ def make_puzzle(s, solvable, iterations):
 
 def make_goal(s):
 	ts = s*s
+	puzzle = [i + 1 for i in range(ts)]
+	puzzle[-1] = 0
+	return puzzle
 	puzzle = [-1 for i in range(ts)]
 	cur = 1
 	x = 0
