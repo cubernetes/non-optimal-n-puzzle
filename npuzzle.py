@@ -1,35 +1,13 @@
 #!/usr/bin/env python3
 
-import os
 import sys
 import time
 import timeit
 import typing
 
-if os.environ.get('DEBUG') == '1':
-    def debug(function):
-        """Debug decorator (active)
-        """
-        def inner(*args, **kwargs):
-            print(f'Calling {function.__name__} with {args} {kwargs}')
-            ret = function(*args, **kwargs)
-            print(f'Leaving {function.__name__}')
-            return ret
-        return inner
-else:
-    def debug(function):
-        """Debug decorator (inactive)
-        """
-        return function
-
 class Puzzle:
-    @debug
     def __init__(self,
             file: typing.TextIO,
-            *,
-            print_after_move: bool = False,
-            clear_before_print: bool = False,
-            delay: float = .5,
         ):
         """Initialize puzzle, determine solvability and find empty tile
         Takes O(n**4) (self._is_solvable()).
@@ -42,9 +20,6 @@ class Puzzle:
         self.moves: list[str]
 
         self.file = file
-        self.print_after_move = print_after_move
-        self.clear_before_print = clear_before_print
-        self.delay = delay
         self.puzzle = self._parse_puzzle()
         self.size = len(self.puzzle)
         self.is_solvable = self._is_solvable()
@@ -53,11 +28,9 @@ class Puzzle:
         self.empty_col = empty_pos[1]
         self.moves = []
 
-        if self.print_after_move:
-            print('\033\x5b30;42mInitial puzzle:\033\x5bm')
-            self.print_puzzle()
+        # print('\033\x5b30;42mInitial puzzle:\033\x5bm')
+        # self.print_puzzle()
 
-    @debug
     def _get_line_without_comments(self) -> list[str]:
         """Return list of lines with comments removed.
         Takes at least O(n**2).
@@ -70,7 +43,6 @@ class Puzzle:
                 lines.append(line)
         return lines
 
-    @debug
     def _parse_puzzle(self) -> list[list[int]]:
         """Return a 2-dimensional integer array with the same number of rows
         as columns, representing the N-puzzle. One entry will be 0, representing
@@ -101,7 +73,6 @@ class Puzzle:
             puzzle.append(row)
         return puzzle
 
-    @debug
     def _is_solvable(self) -> bool:
         """Determine if the puzzle can be turned back to the standard
         configuration just by doing swaps with the empty tile.
@@ -128,7 +99,6 @@ class Puzzle:
         puzzle_parity = (manhatten_to_bottom_right + n_inversions) % 2
         return puzzle_parity == 0
 
-    @debug
     def _get_tile_pos(self, tile: int) -> tuple[int, int]:
         """Linearly search for a tile.
         Takes O(n**2).
@@ -142,15 +112,14 @@ class Puzzle:
             self.error(f'Tile "{tile}" is missing.', 7)
         return tile_idx
 
-    @debug
     def print_puzzle(self, tile: int = -1) -> None:
         """Print puzzle as a 2d square and color the empty square red.
         Also color the :tile green if provided. Empty square will be green
         if tile == 0.
         Takes O(n**2).
         """
-        if self.clear_before_print:
-            print('\033\x5bH\033\x5b2J\033\x5b3J')
+        # print('\033\x5bH\033\x5b2J\033\x5b3J')
+        time.sleep(0.5)
         for i, row in enumerate(self.puzzle):
             for j, col in enumerate(row):
                 if col == tile:
@@ -164,7 +133,6 @@ class Puzzle:
             print()
         print()
 
-    @debug
     def print_moves(self) -> None:
         """Print list of moves as one string
         Takes O(n**2).
@@ -174,7 +142,6 @@ class Puzzle:
         else:
             print('Empty list of moves')
 
-    @debug
     def error(self, msg: str, exit_code: int) -> None:
         """Print error :msg to standard output and exit process with non-zero
         :exit_code. If exit_code is 0, do not exit.
@@ -183,45 +150,26 @@ class Puzzle:
         if exit_code:
             raise SystemExit(exit_code)
 
-    @debug
-    def move(self, moves: str, tile: int = -1) -> None:
+    def move(self, moves: str) -> None:
         """Perform moves (swaps with the emtpy tile) sequentially, provided as each character of :moves.
         Takes O(moves).
         """
-        r, c = self.empty_row, self.empty_col
         for move in moves:
-            time.sleep(self.delay)
-            try:
-                if move == 'd':
-                    self.puzzle[r][c], self.puzzle[r+1][c] = self.puzzle[r+1][c], self.puzzle[r][c]
-                    self.empty_row = r = r + 1
-                    self.moves.append(move)
-                elif move == 'u':
-                    if r-1 < 0: raise IndexError(f'negative index: {r-1}')
-                    self.puzzle[r][c], self.puzzle[r-1][c] = self.puzzle[r-1][c], self.puzzle[r][c]
-                    self.empty_row = r = r - 1
-                    self.moves.append(move)
-                elif move == 'r':
-                    self.puzzle[r][c], self.puzzle[r][c+1] = self.puzzle[r][c+1], self.puzzle[r][c]
-                    self.empty_col = c = c + 1
-                    self.moves.append(move)
-                elif move == 'l':
-                    if c-1 < 0: raise IndexError(f'negative index: {c-1}')
-                    self.puzzle[r][c], self.puzzle[r][c-1] = self.puzzle[r][c-1], self.puzzle[r][c]
-                    self.empty_col = c = c - 1
-                    self.moves.append(move)
-                elif move == 'p': # print
-                    pass
-                else:
-                    self.error(f'Unknown move "{move}".', 8)
+            if move == 'd':
+                self.puzzle[self.empty_row][self.empty_col], self.puzzle[self.empty_row+1][self.empty_col] = self.puzzle[self.empty_row+1][self.empty_col], self.puzzle[self.empty_row][self.empty_col]
+                self.empty_row += 1
+            elif move == 'u':
+                self.puzzle[self.empty_row][self.empty_col], self.puzzle[self.empty_row-1][self.empty_col] = self.puzzle[self.empty_row-1][self.empty_col], self.puzzle[self.empty_row][self.empty_col]
+                self.empty_row -= 1
+            elif move == 'r':
+                self.puzzle[self.empty_row][self.empty_col], self.puzzle[self.empty_row][self.empty_col+1] = self.puzzle[self.empty_row][self.empty_col+1], self.puzzle[self.empty_row][self.empty_col]
+                self.empty_col += 1
+            elif move == 'l':
+                self.puzzle[self.empty_row][self.empty_col], self.puzzle[self.empty_row][self.empty_col-1] = self.puzzle[self.empty_row][self.empty_col-1], self.puzzle[self.empty_row][self.empty_col]
+                self.empty_col -= 1
+            self.moves.append(move)
+            # self.print_puzzle()
 
-                if self.print_after_move:
-                    self.print_puzzle(tile=tile)
-
-            except IndexError as err:
-                self.error(f'{move=}, {r=}, {c=}, {err=}\n', 9)
-
-    @debug
     def focus_tile_top(self, tile_real_row_col: list[int]) -> None:
         """Move the empty tile such that it is immediately above the target :tile,
         without affecting already solved tiles.
@@ -231,22 +179,20 @@ class Puzzle:
         supposed to be inserted.
         """
         tile_real_row, tile_real_col = tile_real_row_col
-        tile = self.puzzle[tile_real_row][tile_real_col]
         if tile_real_row == self.size - 1:
             while self.empty_row < tile_real_row - 1:
-                self.move('d', tile)
+                self.move('d')
             while self.empty_row > tile_real_row - 1:
-                self.move('u', tile)
+                self.move('u')
             while self.empty_col < tile_real_col:
-                self.move('r', tile)
+                self.move('r')
             while self.empty_col > tile_real_col:
-                self.move('l', tile)
+                self.move('l')
         else:
             self.focus_tile_bottom(tile_real_row_col)
-            self.move('u', tile)
+            self.move('u')
             tile_real_row_col[0] += 1
 
-    @debug
     def focus_tile_bottom(self, tile_real_row_col: list[int]) -> None:
         """Move the empty tile such that it is immediately below the target :tile,
         without affecting already solved tiles.
@@ -256,22 +202,20 @@ class Puzzle:
         supposed to be inserted.
         """
         tile_real_row, tile_real_col = tile_real_row_col
-        tile = self.puzzle[tile_real_row][tile_real_col]
         if self.empty_col == tile_real_col and self.empty_row < tile_real_row:
             one_off = 0
             tile_real_row_col[0] -= 1
         else:
             one_off = 1
         while self.empty_row < tile_real_row + one_off:
-            self.move('d', tile)
+            self.move('d')
         while self.empty_row > tile_real_row + one_off:
-            self.move('u', tile)
+            self.move('u')
         while self.empty_col < tile_real_col:
-            self.move('r', tile)
+            self.move('r')
         while self.empty_col > tile_real_col:
-            self.move('l', tile)
+            self.move('l')
 
-    @debug
     def focus_tile_left(self, tile_real_row_col: list[int]) -> None:
         """Move the empty tile such that it is immediately left to the target :tile,
         without affecting already solved tiles.
@@ -281,31 +225,29 @@ class Puzzle:
         supposed to be inserted.
         """
         tile_real_row, tile_real_col = tile_real_row_col
-        tile = self.puzzle[tile_real_row][tile_real_col]
 
         if self.empty_col == tile_real_col and self.empty_row + 1 == tile_real_row:
             if self.empty_col == self.size - 1:
-                self.move('ld', tile)
+                self.move('ld')
             else:
-                self.move('rd', tile)
+                self.move('rd')
         elif self.empty_row < self.size - 1:
-            self.move('d', tile)
+            self.move('d')
 
         if tile_real_col == self.size - 1:
             while self.empty_col < tile_real_col - 1:
-                self.move('r', tile)
+                self.move('r')
             while self.empty_col > tile_real_col - 1:
-                self.move('l', tile)
+                self.move('l')
             while self.empty_row < tile_real_row:
-                self.move('d', tile)
+                self.move('d')
             while self.empty_row > tile_real_row:
-                self.move('u', tile)
+                self.move('u')
         else:
             self.focus_tile_right(tile_real_row_col)
-            self.move('l', tile)
+            self.move('l')
             tile_real_row_col[1] += 1
 
-    @debug
     def focus_tile_right(self, tile_real_row_col: list[int]) -> None:
         """Move the empty tile such that it is immediately right to the target :tile,
         without affecting already solved tiles.
@@ -315,15 +257,14 @@ class Puzzle:
         supposed to be inserted.
         """
         tile_real_row, tile_real_col = tile_real_row_col
-        tile = self.puzzle[tile_real_row][tile_real_col]
 
         if self.empty_col == tile_real_col and self.empty_row + 1 == tile_real_row:
             if self.empty_col == self.size - 1:
-                self.move('ld', tile)
+                self.move('ld')
             else:
-                self.move('rd', tile)
+                self.move('rd')
         elif self.empty_row < self.size - 1:
-            self.move('d', tile)
+            self.move('d')
 
         if self.empty_row == tile_real_row and self.empty_col < tile_real_col:
             one_off = 0
@@ -331,15 +272,14 @@ class Puzzle:
         else:
             one_off = 1
         while self.empty_col < tile_real_col + one_off:
-            self.move('r', tile)
+            self.move('r')
         while self.empty_col > tile_real_col + one_off:
-            self.move('l', tile)
+            self.move('l')
         while self.empty_row < tile_real_row:
-            self.move('d', tile)
+            self.move('d')
         while self.empty_row > tile_real_row:
-            self.move('u', tile)
+            self.move('u')
 
-    @debug
     def move_horizontally_using_bottom(self, tile_real_row_col: list[int], tile_target_row_col: list[int]) -> bool:
         """Return True if the immediate top position of the tile to be moved
         is ideal/necessary for horizontal movement, False otherwise.
@@ -357,7 +297,6 @@ class Puzzle:
             return self.empty_row >= tile_real_row_col[0]
         return self.empty_row >= tile_real_row_col[0]
 
-    @debug
     def move_vertically_using_right(self, tile_real_row_col: list[int], tile_target_row_col: list[int]) -> bool:
         """Return True if the immediate right position of the tile to be moved
         is ideal/necessary for vertical movement, False otherwise.
@@ -370,8 +309,7 @@ class Puzzle:
             return False
         return True
 
-    @debug
-    def align_tile_horizontally(self, tile: int, tile_real_row_col: list[int], tile_target_row_col: list[int], repositioning_moves: str) -> None:
+    def align_tile_horizontally(self, tile_real_row_col: list[int], tile_target_row_col: list[int], repositioning_moves: str) -> None:
         """Move tile left or right until it reaches :tile_col.
         """
         first = True
@@ -380,20 +318,19 @@ class Puzzle:
                 self.focus_tile_right(tile_real_row_col)
                 first = False
             else:
-                self.move(repositioning_moves, tile)
-            self.move('l', tile)
+                self.move(repositioning_moves)
+            self.move('l')
             tile_real_row_col[1] = tile_real_row_col[1] = tile_real_row_col[1] + 1
         while tile_real_row_col[1] > tile_target_row_col[1]:
             if first:
                 self.focus_tile_left(tile_real_row_col)
                 first = False
             else:
-                self.move(repositioning_moves, tile)
-            self.move('r', tile)
+                self.move(repositioning_moves)
+            self.move('r')
             tile_real_row_col[1] = tile_real_row_col[1] = tile_real_row_col[1] - 1
 
-    @debug
-    def align_tile_vertically(self, tile: int, tile_real_row_col: list[int], tile_target_row_col: list[int], repositioning_moves: str) -> None:
+    def align_tile_vertically(self, tile_real_row_col: list[int], tile_target_row_col: list[int], repositioning_moves: str) -> None:
         """Move tile top or down until it reaches :tile_row.
         """
         first = True
@@ -402,19 +339,18 @@ class Puzzle:
                 self.focus_tile_bottom(tile_real_row_col)
                 first = False
             else:
-                self.move(repositioning_moves, tile)
-            self.move('u', tile)
+                self.move(repositioning_moves)
+            self.move('u')
             tile_real_row_col[0] = tile_real_row_col[0] = tile_real_row_col[0] + 1
         while tile_real_row_col[0] > tile_target_row_col[0]:
             if first:
                 self.focus_tile_top(tile_real_row_col)
                 first = False
             else:
-                self.move(repositioning_moves, tile)
-            self.move('d', tile)
+                self.move(repositioning_moves)
+            self.move('d')
             tile_real_row_col[0] = tile_real_row_col[0] = tile_real_row_col[0] - 1
 
-    @debug
     def get_horizontal_repositioning_moves(self, tile_real_row_col: list[int], tile_target_row_col: list[int]) -> str:
         """Return the needed repositioning moves after a tile has been moved
         horizontally to make the moving of the tile repeatable.
@@ -431,7 +367,6 @@ class Puzzle:
                 repositioning_moves = 'ulld'
         return repositioning_moves
 
-    @debug
     def get_vertical_repositioning_moves(self, tile_real_row_col: list[int], tile_target_row_col: list[int]) -> str:
         """Return the needed repositioning moves after a tile has been moved
         vertically to make the moving of the tile repeatable.
@@ -448,7 +383,6 @@ class Puzzle:
                 repositioning_moves = 'luur'
         return repositioning_moves
 
-    @debug
     def solve_row_n_minus_2_tiles(self, row: int) -> None:
         """Solve first n-2 tiles of a particular :row.
         Requires that all previous rows are completely solved.
@@ -460,13 +394,13 @@ class Puzzle:
             tile_real_row_col = list(self._get_tile_pos(tile))
 
             repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(tile_real_row_col, tile_target_row_col)
-            self.align_tile_horizontally(tile, tile_real_row_col, tile_target_row_col, repositioning_moves_horizontal)
+            self.align_tile_horizontally(tile_real_row_col, tile_target_row_col, repositioning_moves_horizontal)
             repositioning_moves_vertical = self.get_vertical_repositioning_moves(tile_real_row_col, tile_target_row_col)
-            self.align_tile_vertically(tile, tile_real_row_col, tile_target_row_col, repositioning_moves_vertical)
+            self.align_tile_vertically(tile_real_row_col, tile_target_row_col, repositioning_moves_vertical)
 
-    @debug
-    def get_last_2_row_tiles(self, row: int) -> tuple[int, list[int], list[int], int, list[int], list[int]]:
-        """Return the indices, rows and columns of the penultimate and ultimate (last) tiles in the :row.
+    def solve_row_last_2_tiles(self, row: int) -> None:
+        """Solve last 2 tiles of a particular :row.
+        Requires that all previous tiles in that row are solved.
         """
         P = (row + 1) * self.size - 1 # == Penultimate Tile Index
         PT = list(divmod(P - 1 if P != 0 else self.size ** 2 - 1, self.size)) # Penultimate Tile Target Row & Col
@@ -478,172 +412,99 @@ class Puzzle:
         # see comment above
         LR = list(self._get_tile_pos(L)) # Last Tile Real Row & Col
 
-        return P, PT, PR, L, LT, LR
-
-    @debug
-    def case_P_solved_L_anywhere(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
-        """Solve the case where the penultimate tile is solved and the last
-        tile is anywhere (except in penultimate tile's target position).
-        """
-        self.focus_tile_right(PR) # go to right of P, this might move L
-        self.move('l', L) # move P to the right
-        PR[1] += 1 # reflect that
-        # TODO: prove that L will never be at (PT[0]+1, PT[1])
-        LR[0], LR[1] = self._get_tile_pos(L) # get L in case it changed, also splitting it to update the references
-        repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(LR, LT) # determine moving strategory
-        self.align_tile_horizontally(L, LR, LT, repositioning_moves_horizontal) # move L to its column
-        LT[0] += 1 # increase target row by one, because L is supposed to be right below the new P
-        self.align_tile_vertically(L, LR, LT, 'luur') # move L up, right below P
-        self.focus_tile_left(PR) # go to left of P
-        self.move('rd', L) # solve the row
-
-    @debug
-    def case_P_solved_L_bottom_left(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
-        """Solve the case where the penultimate tile is solved and the last tile
-        is one to the bottom, one to the left of its target position (right below the penultimate tile).
-        """
-        if self.empty_row == LT[0] + 1 and \
-           self.empty_col < LR[1]: # empty is in the same row and left to L?
-            self.move('r' * (1 + LR[1] - self.empty_col), L) # move empty all the way to the right (moving L one tile to its left)
-            self.move('uldldrrulurd', L) # solve the row
-
-        else: # empty is not (in the same row and left to L)
-            if self.empty_row <= LT[0] + 1 and \
-               self.empty_col > LR[1]: # empty is in the same row or above the row of L and to the right of L?
-                self.move('d' * (LT[0] + 1 - self.empty_row + 1), L) # move empty down until its row is right below L
-
-            self.move('u' * (self.empty_row - LT[0] - 2), L) # if we're too low, move empty up until we're right below L
-            if self.empty_col > LR[1]: # empty is right of L
-                self.move('l' * (self.empty_col - LR[1]), L) # move empty left
-
-            elif self.empty_col < LR[1]: # empty is left of L
-                self.move('r' * (LR[1] - self.empty_col), L) # move empty right
-
-            self.move('urulddrulurd', L) # solve the row
-
-    @debug
-    def case_P_solved_L_one_below(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
-        """Solve the case where the penultimate tile is solved and the last tile is one below its target position.
-        """
-        self.focus_tile_bottom(LR) # This might move L into its target row
-        if LR == LT: # if that is the case, we're done
-            return
-
-        self.move('uuldrdluurd', L) # solve the row
-
-    @debug
-    def case_P_and_L_swapped(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
-        """Transform the case where the penultimate tile and the last tile are solved,
-        but swapped in their places, to the case where the penultimate tile is solved the
-        last tile is below the penultimate tile.
-        """
-        # transform to a case handled later
-
-        self.focus_tile_bottom(LR) # safe, won't move P or L
-        self.move('ur', L) # This depends on the previous action not moving P or L
-        LR[0] += 1 # P and L have have moved, we must reflect that
-        PR[1] -= 1
-
-    @debug
-    def case_P_in_target_of_L(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
-        """Solve the case where the penultimate tile is solved and the last tile is anywhere
-        (except in the penultimate tile's target position).
-        """
-        # L won't be in P's target position, we checked that case already
-        repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(LR, LT)
-        self.align_tile_horizontally(L, LR, LT, repositioning_moves_horizontal) # won't move P
-        LT[0] += 1 # we want L to be right below P
-        self.align_tile_vertically(L, LR, LT, 'luur') # won't move P
-        self.focus_tile_bottom(LR) # in case the vertical alignment didn't happen, we might be at a (not really) random location, so ensure focus below R (will not move P)
-        self.move('luurd', L) # solve the row
-
-    @debug
-    def case_L_solved_P_in_last_column(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
-        """Solve the case where the last tile is solved and the penultimate tile
-        is anywhere in the last column.
-        """
-        if PR[0] < self.size - 1: # P is NOT in the last row?
-            self.focus_tile_bottom(PR) # focus below P (which only works if it's not in the last row)
-            PR[0] += 1 # we are below P. The next step is going to focus L, which is above. Thereforce, P will move down (increasing the row)
-
-        self.focus_tile_bottom(LR)
-        self.move('uldr', L) # put L bottom-left (diagonally) of its target position
-        self.align_tile_vertically(P, PR, PT, 'luur') # move P to LT
-        # now L is either at 1. (LT[0]+2, LT[1]-1) or 2. (LT[0]+2, LT[1])
-        self.move('d', L)
-        if self.puzzle[LT[0] + 2][LT[1]-1] == L: # if L is at (LT[0]+2, LT[1]-1)
-            self.move('lurd', L) # synchronize, now L will be at the same position that it would be if it was at 2. to begin with
-        self.move('luurd', L) # solve the row
-        # TOOD: Remove
-        assert self.puzzle[PT[0]][PT[1]] == P and self.puzzle[LT[0]][LT[1]] == L, 'row is not solved'
-
-    @debug
-    def case_P_anywhere(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int], row: int) -> None:
-        """Solve the default case where the penultimate tile is anywhere and the last tile is also anywhere.
-        Do this by forcing a state that can be handled by the other cases and call the solving function
-        recursively.
-        """
-        PT[1] += 1 # goal is to move P to LT
-        repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(PR, PT)
-        self.align_tile_horizontally(P, PR, PT, repositioning_moves_horizontal) # TODO: prove that this will never cause one of the other cases
-        if LR != LT:
-            self.align_tile_vertically(P, PR, PT, 'luur') # this is safe and won't put L into a weird place
-        # no we are in a case that is already handled above (P being in LT)
-        self.solve_row_last_2_tiles(row)
-
-    @debug
-    def case_P_solved(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
-        """Solve the case where the penultimate tile is solved and the last tile
-        is anywhere.
-        """
-        if LR == LT: # L is also in correct position? Well, then we're done
-            return
-
-        elif LR[0] == LT[0] + 1 and \
-             LR[1] == LT[1]: # L is in correct column, but one below its target row?
-            self.case_P_solved_L_one_below(P, L, PR, LR, PT, LT)
-
-        elif LR[0] == LT[0] + 1 and \
-             LR[1] == LT[1] - 1: # L is bottom-left (diagonally) of its target position?
-            self.case_P_solved_L_bottom_left(P, L, PR, LR, PT, LT)
-
-        else: # L is anywhere else?
-            self.case_P_solved_L_anywhere(P, L, PR, LR, PT, LT)
-
-    @debug
-    def case_P_in_target_of_L_and_empty_in_PT(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
-        """Transform the case where the empty tile is in the target position of the
-        penultimate tile and the penultimate tile is in the target position of the
-        last tile to the case where the penultimate tile is solved.
-        """
-        self.move('r', P)
-        PR[1] -= 1
-
-    @debug
-    def solve_row_last_2_tiles(self, row: int) -> None:
-        """Solve last 2 tiles of a particular :row.
-        Requires that all previous tiles in that row are solved.
-        """
-        P, PT, PR, L, LT, LR = self.get_last_2_row_tiles(row) # if python only had zero-cost abstrations...
-
         if PR == LT and \
            LR == PT: # last 2 tiles are swapped?
-            self.case_P_and_L_swapped(P, L, PR, LR, PT, LT) # always passing 6 vars to avoid deconstructing them all the time
+            # transform to a case handled later
+
+            self.focus_tile_bottom(LR) # safe, won't move P or L
+            self.move('ur') # This depends on the previous action not moving P or L
+            LR[0] += 1 # P and L have have moved, we must reflect that
+            PR[1] -= 1
         elif [self.empty_row, self.empty_col] == PT and \
              PR == LT: # empty tile in target of P and P in target of L?
-            self.case_P_in_target_of_L_and_empty_in_PT(P, L, PR, LR, PT, LT)
+            self.move('r')
+            PR[1] -= 1
 
         if PR == PT: # P is in correct position?
-            self.case_P_solved(P, L, PR, LR, PT, LT)
+            if LR == LT: # L is also in correct position? Well, then we're done
+                return
+
+            elif LR[0] == LT[0] + 1 and \
+                 LR[1] == LT[1]: # L is in correct column, but one below its target row?
+                    self.focus_tile_bottom(LR) # This might move L into its target row
+                    if LR == LT: # if that is the case, we're done
+                        return
+
+                    self.move('uuldrdluurd') # solve the row
+
+            elif LR[0] == LT[0] + 1 and \
+                 LR[1] == LT[1] - 1: # L is bottom-left (diagonally) of its target position?
+                    if self.empty_row == LT[0] + 1 and \
+                       self.empty_col < LR[1]: # empty is in the same row and left to L?
+                        self.move('r' * (1 + LR[1] - self.empty_col)) # move empty all the way to the right (moving L one tile to its left)
+                        self.move('uldldrrulurd') # solve the row
+
+                    else: # empty is not (in the same row and left to L)
+                        if self.empty_row <= LT[0] + 1 and \
+                           self.empty_col > LR[1]: # empty is in the same row or above the row of L and to the right of L?
+                            self.move('d' * (LT[0] + 1 - self.empty_row + 1)) # move empty down until its row is right below L
+
+                        self.move('u' * (self.empty_row - LT[0] - 2)) # if we're too low, move empty up until we're right below L
+                        if self.empty_col > LR[1]: # empty is right of L
+                            self.move('l' * (self.empty_col - LR[1])) # move empty left
+
+                        elif self.empty_col < LR[1]: # empty is left of L
+                            self.move('r' * (LR[1] - self.empty_col)) # move empty right
+
+                        self.move('urulddrulurd') # solve the row
+
+            else: # L is anywhere else?
+                if self.empty_col < self.size - 1 and \
+                   self.empty_col == LR[1] and \
+                   self.empty_row == LR[0] - 1: # empty right above L and not in last column?
+                    self.move('r') # to avoid causing that edge that we haven't proven that it won't happen again (see TODO below)
+                self.focus_tile_right(PR) # go to right of P, this might move L
+                self.move('l') # move P to the right
+                PR[1] += 1 # reflect that
+                # TODO: prove that L will never be at (PT[0]+1, PT[1])
+                LR[0], LR[1] = self._get_tile_pos(L) # get L in case it changed, also splitting it to update the references
+                repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(LR, LT) # determine moving strategory
+                self.align_tile_horizontally(LR, LT, repositioning_moves_horizontal) # move L to its column
+                LT[0] += 1 # increase target row by one, because L is supposed to be right below the new P
+                self.align_tile_vertically(LR, LT, 'luur') # move L up, right below P
+                self.focus_tile_left(PR) # go to left of P
+                self.move('rd') # solve the row
         elif PR == LT: # P is in L's target position?
-            self.case_P_in_target_of_L(P, L, PR, LR, PT, LT)
+            # L won't be in P's target position, we checked that case already
+            repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(LR, LT)
+            self.align_tile_horizontally(LR, LT, repositioning_moves_horizontal) # won't move P
+            LT[0] += 1 # we want L to be right below P
+            self.align_tile_vertically(LR, LT, 'luur') # won't move P
+            self.focus_tile_bottom(LR) # in case the vertical alignment didn't happen, we might be at a (not really) random location, so ensure focus below R (will not move P)
+            self.move('luurd') # solve the row
         elif PR[1] == self.size - 1 and \
              LR == LT: # L is solved and P is somewhere in the last column?
-            self.case_L_solved_P_in_last_column(P, L, PR, LR, PT, LT)
-        else: # P is anywhere else, or the last column if L is not solved
-            self.case_P_anywhere(P, L, PR, LR, PT, LT, row)
+            if PR[0] < self.size - 1: # P is NOT in the last row?
+                self.focus_tile_bottom(PR) # focus below P (which only works if it's not in the last row)
+                PR[0] += 1 # we are below P. The next step is going to focus L, which is above. Thereforce, P will move down (increasing the row)
 
-    @debug
+            self.focus_tile_bottom(LR)
+            self.move('uldr') # put L bottom-left (diagonally) of its target position
+            self.align_tile_vertically(PR, PT, 'luur') # move P to LT
+            # now L is either at 1. (LT[0]+2, LT[1]-1) or 2. (LT[0]+2, LT[1])
+            self.move('d')
+            if self.puzzle[LT[0] + 2][LT[1]-1] == L: # if L is at (LT[0]+2, LT[1]-1)
+                self.move('lurd') # synchronize, now L will be at the same position that it would be if it was at 2. to begin with
+            self.move('luurd') # solve the row
+        else: # P is anywhere else, or the last column if L is not solved
+            PT[1] += 1 # goal is to move P to LT
+            repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(PR, PT)
+            self.align_tile_horizontally(PR, PT, repositioning_moves_horizontal) # TODO: prove that this will never cause one of the other cases
+            if LR != LT:
+                self.align_tile_vertically(PR, PT, 'luur') # this is safe and won't put L into a weird place
+            # no we are in a case that is already handled above (P being in LT)
+            self.solve_row_last_2_tiles(row)
+
     def solve_n_minus_2_rows(self) -> None:
         """Solve first n-2 rows of the puzzle.
         No additional requirements.
@@ -652,46 +513,44 @@ class Puzzle:
             self.solve_row_n_minus_2_tiles(row)
             self.solve_row_last_2_tiles(row)
 
-    @debug
-    def last_2_rows_prepare_T(self, T: int, TR: list[int], TT: list[int]) -> None:
+    def last_2_rows_prepare_T(self, TR: list[int], TT: list[int]) -> None:
         """Move the top tile into the bottom tile's target position as a preliminary
         step.
         """
         if TR[0] == TT[0] + 1 and \
            TR[1] == TT[1]: # target tile is already in BT?
             if self.empty_row != TT[0]: # empty is in bottom row?
-                self.move('u', T)
+                self.move('u')
             if self.empty_col < TR[1]: # empty is left of T?
                 assert False # this branch should not be possible
-                # self.move('r' * (TR[1] - self.empty_col), T)
+                # self.move('r' * (TR[1] - self.empty_col))
             else: # empty is right of T? (this should always happen)
-                self.move('l' * (self.empty_col - TR[1]), T)
+                self.move('l' * (self.empty_col - TR[1]))
             return # T is now at BT and empty is right above
 
         if TR[0] == TT[0]: # T is in its target row? (it should be below)
             if self.empty_row == TT[0]: # empty is also in target tile's row?
-                self.move('d', T)
+                self.move('d')
             if self.empty_col < TR[1]: # empty is left of T?
-                self.move('r' * (TR[1] - self.empty_col), T)
+                self.move('r' * (TR[1] - self.empty_col))
             else: # empty is right of T?
-                self.move('l' * (self.empty_col - TR[1]), T)
-            self.move('u', T)
+                self.move('l' * (self.empty_col - TR[1]))
+            self.move('u')
             TR[0] += 1
 
         else: # T is in bottom row?
             if self.empty_row != TT[0]: # empty is also in bottom row?
-                self.move('u', T)
+                self.move('u')
             if self.empty_col < TR[1]: # empty is left of T?
-                self.move('r' * (TR[1] - self.empty_col), T)
+                self.move('r' * (TR[1] - self.empty_col))
             else: # empty is right of T?
-                self.move('l' * (self.empty_col - TR[1]), T)
+                self.move('l' * (self.empty_col - TR[1]))
 
         # T as at bottom row, empty is right above, and T is not at BT (it must be moved)
-        self.move('ldrul' * (TR[1] - TT[1]), T)
+        self.move('ldrul' * (TR[1] - TT[1]))
         # T is now at BT and empty is right above
 
-    @debug
-    def last_2_rows_prepare_B(self, B: int, BR: list[int], BT: list[int]) -> None:
+    def last_2_rows_prepare_B(self, BR: list[int], BT: list[int]) -> None:
         """Move the bottom tile to the right of the top tile (where the bottom
         tile will be moved to later).
         Requires the top tile to be in the target position of the bottom tile and
@@ -699,17 +558,16 @@ class Puzzle:
         """
         if self.empty_row == BR[0] and \
            self.empty_col == BR[1] - 1: # edge case where B is right of empty
-               self.move('drrulldruldrurdlurd', B) # prepare
+               self.move('drrulldruldrurdlurd') # prepare
                return
         if BR[0] == BT[0] - 1: # B is in top row? (we need to move it down)
-            self.move('r' * (BR[1] - self.empty_col - 1), B)
-            self.move('dru', B)
+            self.move('r' * (BR[1] - self.empty_col - 1))
+            self.move('dru')
         else: # B is in bottom row?
-            self.move('r' * (BR[1] - self.empty_col), B)
-        self.move('ldrul' * (BR[1] - BT[1] - 1), B)
-        self.move('rd', B)
+            self.move('r' * (BR[1] - self.empty_col))
+        self.move('ldrul' * (BR[1] - BT[1] - 1))
+        self.move('rd')
 
-    @debug
     def solve_last_2_rows_col(self, col: int) -> None:
         """Solve a particular :col from the last 2 rows.
         Requires that all previous columns in the last 2 rows are solved.
@@ -719,18 +577,17 @@ class Puzzle:
         # mutable list needed to pass it down to funcs as ref without creating bloated object or creating non-generic methods
         TR = list(self._get_tile_pos(T)) # Top Tile Real Row & Col
 
-        self.last_2_rows_prepare_T(T, TR, TT)
+        self.last_2_rows_prepare_T(TR, TT)
 
         B = T + self.size # Bottom Tile Index
         BT = list(divmod(B - 1 if B != 0 else self.size ** 2 - 1, self.size)) # Bottom Tile Target Row & Col
         # see comment above
         BR = list(self._get_tile_pos(B)) # Bottom Tile Real Row & Col
 
-        self.last_2_rows_prepare_B(B, BR, BT)
+        self.last_2_rows_prepare_B(BR, BT)
 
-        self.move('ulldr', B) # solve column
+        self.move('ulldr') # solve column
 
-    @debug
     def solve_last_2_rows_n_minus_2_cols(self) -> None:
         """Solve the first n-2 columns of the last 2 rows.
         Requires that all previous rows are solved.
@@ -738,31 +595,24 @@ class Puzzle:
         for col in range(self.size - 2):
             self.solve_last_2_rows_col(col)
 
-    @debug
     def solve_last_4_tiles(self) -> None:
         """Solve bottom right 4 tiles. If not self.is_solvable, then this step
         will fail.
         Requires that all tiles of the puzzle are solved, except these last 4.
         """
-        U = self.size ** 2 - 1 # ultimate tile, the very last tile (biggest value)
-        UR = list(self._get_tile_pos(U))
+        UR = list(self._get_tile_pos(self.size ** 2 - 1)) # ultimate tile, the very last tile (biggest value)
         if self.empty_row == UR[0] and \
            self.empty_col == UR[1] - 1: # ultimate tile is in target position of empty
-            self.move('r', self.size ** 2)
+            self.move('r')
         elif self.empty_row == UR[0] + 1 and \
              self.empty_col == UR[1]: # ultimate tile is above empty
-            self.move('ur', U)
-            self.move('d', self.size ** 2)
+            self.move('urd')
         elif self.empty_row == UR[0] + 1 and \
              self.empty_col == UR[1] - 1: # ultimate tile is top-right (diagonally) of the empty tile
-            self.move('ruld', U)
-            self.move('r', self.size ** 2)
+            self.move('ruldr')
         else: # already solved!
-            if self.print_after_move:
-                self.move('p', self.size ** 2)
             return
 
-    @debug
     def solve_last_2_rows(self) -> None:
         """Solve last two rows of the puzzle.
         Requires that all previous rows are solved.
@@ -770,7 +620,6 @@ class Puzzle:
         self.solve_last_2_rows_n_minus_2_cols()
         self.solve_last_4_tiles()
 
-    @debug
     def solve(self) -> None:
         """Turn the puzzle back to its standard configuration and save the moves
         in self.moves
@@ -784,7 +633,7 @@ class Puzzle:
         self.solve_last_2_rows()
 
 if __name__ == '__main__':
-    puzzle = Puzzle(open(0), print_after_move=False, clear_before_print=False, delay=0)
+    puzzle = Puzzle(open(0))
     elapsed_seconds = timeit.timeit('puzzle.solve()', globals=globals(), number=1)
 
     print(f'Time: {elapsed_seconds:.6f}s, Moves: {len(puzzle.moves)}', file=sys.stderr, flush=True)

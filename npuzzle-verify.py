@@ -70,6 +70,7 @@ def print_puzzle(puzzle: list[list[int]], tile: int = -1) -> None:
     print()
 
 def move(puzzle: list[list[int]], size: int, moves: str) -> None:
+    global original_puzzle
     r, c = get_tile_pos(puzzle, size, 0)
     for move in moves:
         try:
@@ -91,6 +92,7 @@ def move(puzzle: list[list[int]], size: int, moves: str) -> None:
                 exit_error(f'Unknown move "{move}".', 8)
 
         except IndexError as err:
+            print_puzzle(original_puzzle)
             exit_error(f'{move=}, {r=}, {c=}, {err=}\n', 9)
 
 def puzzle_solved(puzzle: list[list[int]], size: int) -> bool:
@@ -111,6 +113,7 @@ def verify_puzzle(puzzle: list[list[int]], solution_str: str) -> bool:
     return puzzle_solved(puzzle, size)
 
 if __name__ == "__main__":
+    global original_puzzle
     puzzle, solution_string = parse_puzzle_and_solution(open(0))
     original_puzzle = copy.deepcopy(puzzle)
     if verify_puzzle(puzzle, solution_string):
