@@ -28,6 +28,7 @@ class Puzzle:
             file: typing.TextIO,
             *,
             print_after_move: bool = False,
+            clear_before_print: bool = False,
             delay: float = .5,
         ):
         """Initialize puzzle, determine solvability and find empty tile
@@ -42,6 +43,7 @@ class Puzzle:
 
         self.file = file
         self.print_after_move = print_after_move
+        self.clear_before_print = clear_before_print
         self.delay = delay
         self.puzzle = self._parse_puzzle()
         self.size = len(self.puzzle)
@@ -147,7 +149,8 @@ class Puzzle:
         if tile == 0.
         Takes O(n**2).
         """
-        # print('\033\x5bH\033\x5b2J\033\x5b3J')
+        if self.clear_before_print:
+            print('\033\x5bH\033\x5b2J\033\x5b3J')
         for i, row in enumerate(self.puzzle):
             for j, col in enumerate(row):
                 if col == tile:
@@ -192,22 +195,29 @@ class Puzzle:
                 if move == 'd':
                     self.puzzle[r][c], self.puzzle[r+1][c] = self.puzzle[r+1][c], self.puzzle[r][c]
                     self.empty_row = r = r + 1
+                    self.moves.append(move)
                 elif move == 'u':
                     if r-1 < 0: raise IndexError(f'negative index: {r-1}')
                     self.puzzle[r][c], self.puzzle[r-1][c] = self.puzzle[r-1][c], self.puzzle[r][c]
                     self.empty_row = r = r - 1
+                    self.moves.append(move)
                 elif move == 'r':
                     self.puzzle[r][c], self.puzzle[r][c+1] = self.puzzle[r][c+1], self.puzzle[r][c]
                     self.empty_col = c = c + 1
+                    self.moves.append(move)
                 elif move == 'l':
                     if c-1 < 0: raise IndexError(f'negative index: {c-1}')
                     self.puzzle[r][c], self.puzzle[r][c-1] = self.puzzle[r][c-1], self.puzzle[r][c]
                     self.empty_col = c = c - 1
+                    self.moves.append(move)
+                elif move == 'p': # print
+                    pass
                 else:
                     self.error(f'Unknown move "{move}".', 8)
-                self.moves.append(move)
+
                 if self.print_after_move:
                     self.print_puzzle(tile=tile)
+
             except IndexError as err:
                 self.error(f'{move=}, {r=}, {c=}, {err=}\n', 9)
 
@@ -606,7 +616,7 @@ class Puzzle:
         penultimate tile and the penultimate tile is in the target position of the
         last tile to the case where the penultimate tile is solved.
         """
-        self.move('r')
+        self.move('r', P)
         PR[1] -= 1
 
     @debug
@@ -697,7 +707,7 @@ class Puzzle:
         else: # B is in bottom row?
             self.move('r' * (BR[1] - self.empty_col), B)
         self.move('ldrul' * (BR[1] - BT[1] - 1), B)
-        self.move('rd')
+        self.move('rd', B)
 
     @debug
     def solve_last_2_rows_col(self, col: int) -> None:
@@ -718,7 +728,7 @@ class Puzzle:
 
         self.last_2_rows_prepare_B(B, BR, BT)
 
-        self.move('ulldr') # solve column
+        self.move('ulldr', B) # solve column
 
     @debug
     def solve_last_2_rows_n_minus_2_cols(self) -> None:
@@ -734,6 +744,23 @@ class Puzzle:
         will fail.
         Requires that all tiles of the puzzle are solved, except these last 4.
         """
+        U = self.size ** 2 - 1 # ultimate tile, the very last tile (biggest value)
+        UR = list(self._get_tile_pos(U))
+        if self.empty_row == UR[0] and \
+           self.empty_col == UR[1] - 1: # ultimate tile is in target position of empty
+            self.move('r', self.size ** 2)
+        elif self.empty_row == UR[0] + 1 and \
+             self.empty_col == UR[1]: # ultimate tile is above empty
+            self.move('ur', U)
+            self.move('d', self.size ** 2)
+        elif self.empty_row == UR[0] + 1 and \
+             self.empty_col == UR[1] - 1: # ultimate tile is top-right (diagonally) of the empty tile
+            self.move('ruld', U)
+            self.move('r', self.size ** 2)
+        else: # already solved!
+            if self.print_after_move:
+                self.move('p', self.size ** 2)
+            return
 
     @debug
     def solve_last_2_rows(self) -> None:
@@ -750,14 +777,14 @@ class Puzzle:
         Takes probably at least O(n**3) multiplied by some big constant, or more.
         Requires that the puzzle is solvable.
         """
-        if not puzzle.is_solvable:
+        if not puzzle._is_solvable():
             puzzle.error('Puzzle not solvable', 0)
             return
         self.solve_n_minus_2_rows()
         self.solve_last_2_rows()
 
 if __name__ == '__main__':
-    puzzle = Puzzle(open(0), print_after_move=True, delay=0.5)
+    puzzle = Puzzle(open(0), print_after_move=True, clear_before_print=False, delay=0)
     elapsed_seconds = timeit.timeit('puzzle.solve()', globals=globals(), number=1)
 
     print(f'Elapsed seconds: {elapsed_seconds:.6f}')
