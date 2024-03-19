@@ -468,8 +468,6 @@ class Puzzle:
         # see comment above
         LR = list(self._get_tile_pos(L)) # Last Tile Real Row & Col
 
-        # E == empty tile
-
         return P, PT, PR, L, LT, LR
 
     @debug
@@ -495,21 +493,21 @@ class Puzzle:
         is one to the bottom, one to the left of its target position (right below the penultimate tile).
         """
         if self.empty_row == LT[0] + 1 and \
-           self.empty_col < LR[1]: # E is in the same row and left to L?
-            self.move('r' * (1 + LR[1] - self.empty_col), L) # move E all the way to the right (moving L one tile to its left)
+           self.empty_col < LR[1]: # empty is in the same row and left to L?
+            self.move('r' * (1 + LR[1] - self.empty_col), L) # move empty all the way to the right (moving L one tile to its left)
             self.move('uldldrrulurd', L) # solve the row
 
-        else: # E is not (in the same row and left to L)
+        else: # empty is not (in the same row and left to L)
             if self.empty_row <= LT[0] + 1 and \
-               self.empty_col > LR[1]: # E is in the same row or above the row of L and to the right of L?
-                self.move('d' * (LT[0] + 1 - self.empty_row + 1), L) # move E down until its row is right below L
+               self.empty_col > LR[1]: # empty is in the same row or above the row of L and to the right of L?
+                self.move('d' * (LT[0] + 1 - self.empty_row + 1), L) # move empty down until its row is right below L
 
-            self.move('u' * (self.empty_row - LT[0] - 2), L) # if we're too low, move E up until we're right below L
-            if self.empty_col > LR[1]: # E is right of L
-                self.move('l' * (self.empty_col - LR[1]), L) # move E left
+            self.move('u' * (self.empty_row - LT[0] - 2), L) # if we're too low, move empty up until we're right below L
+            if self.empty_col > LR[1]: # empty is right of L
+                self.move('l' * (self.empty_col - LR[1]), L) # move empty left
 
-            elif self.empty_col < LR[1]: # E is left of L
-                self.move('r' * (LR[1] - self.empty_col), L) # move E right
+            elif self.empty_col < LR[1]: # empty is left of L
+                self.move('r' * (LR[1] - self.empty_col), L) # move empty right
 
             self.move('urulddrulurd', L) # solve the row
 
@@ -645,44 +643,82 @@ class Puzzle:
             self.solve_row_last_2_tiles(row)
 
     @debug
-    def get_top_and_bottom_tiles(self, col: int) -> tuple[int, list[int], list[int], int, list[int], list[int]]:
-        """Return the indices, rows and columns of the top and bottom (last) tiles in the :col
-        (applies for the last two rows).
+    def last_2_rows_prepare_T(self, T: int, TR: list[int], TT: list[int]) -> None:
+        """Move the top tile into the bottom tile's target position as a preliminary
+        step.
+        """
+        if TR[0] == TT[0] + 1 and \
+           TR[1] == TT[1]: # target tile is already in BT?
+            if self.empty_row != TT[0]: # empty is in bottom row?
+                self.move('u', T)
+            if self.empty_col < TR[1]: # empty is left of T?
+                assert False # this branch should not be possible
+                # self.move('r' * (TR[1] - self.empty_col), T)
+            else: # empty is right of T? (this should always happen)
+                self.move('l' * (self.empty_col - TR[1]), T)
+            return # T is now at BT and empty is right above
+
+        if TR[0] == TT[0]: # T is in its target row? (it should be below)
+            if self.empty_row == TT[0]: # empty is also in target tile's row?
+                self.move('d', T)
+            if self.empty_col < TR[1]: # empty is left of T?
+                self.move('r' * (TR[1] - self.empty_col), T)
+            else: # empty is right of T?
+                self.move('l' * (self.empty_col - TR[1]), T)
+            self.move('u', T)
+            TR[0] += 1
+
+        else: # T is in bottom row?
+            if self.empty_row != TT[0]: # empty is also in bottom row?
+                self.move('u', T)
+            if self.empty_col < TR[1]: # empty is left of T?
+                self.move('r' * (TR[1] - self.empty_col), T)
+            else: # empty is right of T?
+                self.move('l' * (self.empty_col - TR[1]), T)
+
+        # T as at bottom row, empty is right above, and T is not at BT (it must be moved)
+        self.move('ldrul' * (TR[1] - TT[1]), T)
+        # T is now at BT and empty is right above
+
+    @debug
+    def last_2_rows_prepare_B(self, B: int, BR: list[int], BT: list[int]) -> None:
+        """Move the bottom tile to the right of the top tile (where the bottom
+        tile will be moved to later).
+        Requires the top tile to be in the target position of the bottom tile and
+        requires the empty tile to be right above the top tile.
+        """
+        if self.empty_row == BR[0] and \
+           self.empty_col == BR[1] - 1: # edge case where B is right of empty
+               self.move('drrulldruldrurdlurd', B) # prepare
+               return
+        if BR[0] == BT[0] - 1: # B is in top row? (we need to move it down)
+            self.move('r' * (BR[1] - self.empty_col - 1), B)
+            self.move('dru', B)
+        else: # B is in bottom row?
+            self.move('r' * (BR[1] - self.empty_col), B)
+        self.move('ldrul' * (BR[1] - BT[1] - 1), B)
+        self.move('rd')
+
+    @debug
+    def solve_last_2_rows_col(self, col: int) -> None:
+        """Solve a particular :col from the last 2 rows.
+        Requires that all previous columns in the last 2 rows are solved.
         """
         T = self.size * (self.size - 2) + 1 + col # Top Tile Index
         TT = list(divmod(T - 1 if T != 0 else self.size ** 2 - 1, self.size)) # Top Tile Target Row & Col
         # mutable list needed to pass it down to funcs as ref without creating bloated object or creating non-generic methods
         TR = list(self._get_tile_pos(T)) # Top Tile Real Row & Col
 
+        self.last_2_rows_prepare_T(T, TR, TT)
+
         B = T + self.size # Bottom Tile Index
         BT = list(divmod(B - 1 if B != 0 else self.size ** 2 - 1, self.size)) # Bottom Tile Target Row & Col
         # see comment above
         BR = list(self._get_tile_pos(B)) # Bottom Tile Real Row & Col
 
-        # E == empty tile
+        self.last_2_rows_prepare_B(B, BR, BT)
 
-        return T, TT, TR, B, BT, BR
-
-    # TODO: Not working!
-    @debug
-    def solve_last_2_rows_col(self, col: int) -> None:
-        """Solve a particular :col from the last 2 rows.
-        Requires that all previous columns in the last 2 rows are solved.
-        """
-        T, TT, TR, B, BT, BR = self.get_top_and_bottom_tiles(col)
-
-        self.focus_tile_right(TR)
-        repositioning_moves_vertical = self.get_vertical_repositioning_moves(TR, TT)
-        TT[0] += 1
-        self.align_tile_vertically(T, TR, TT, repositioning_moves_vertical)
-        repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(TR, TT)
-        self.align_tile_horizontally(T, TR, TT, repositioning_moves_horizontal)
-
-        repositioning_moves_vertical = self.get_vertical_repositioning_moves(BR, BT)
-        BT[1] += 1
-        self.align_tile_vertically(B, BR, BT, repositioning_moves_vertical)
-        repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(BR, BT)
-        self.align_tile_horizontally(B, BR, BT, repositioning_moves_horizontal)
+        self.move('ulldr') # solve column
 
     @debug
     def solve_last_2_rows_n_minus_2_cols(self) -> None:
@@ -721,7 +757,7 @@ class Puzzle:
         self.solve_last_2_rows()
 
 if __name__ == '__main__':
-    puzzle = Puzzle(open(0), print_after_move=True, delay=0)
+    puzzle = Puzzle(open(0), print_after_move=True, delay=0.5)
     elapsed_seconds = timeit.timeit('puzzle.solve()', globals=globals(), number=1)
 
     print(f'Elapsed seconds: {elapsed_seconds:.6f}')
