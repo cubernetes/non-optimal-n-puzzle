@@ -5,268 +5,11 @@ import sys
 import time
 import timeit
 import typing
-import inspect
-
-def move_empty(dir: str, puzzle: list[list[int]]) -> list[str]:
-    global empty_idx, tile_idx
-    r, c = empty_idx
-    if dir == 'd':
-        puzzle[r][c], puzzle[r+1][c] = puzzle[r+1][c], puzzle[r][c]
-        empty_idx[0] += 1
-    elif dir == 'u':
-        puzzle[r][c], puzzle[r-1][c] = puzzle[r-1][c], puzzle[r][c]
-        empty_idx[0] -= 1
-    elif dir == 'r':
-        puzzle[r][c], puzzle[r][c+1] = puzzle[r][c+1], puzzle[r][c]
-        empty_idx[1] += 1
-    elif dir == 'l':
-        puzzle[r][c], puzzle[r][c-1] = puzzle[r][c-1], puzzle[r][c]
-        empty_idx[1] -= 1
-    print_puzzle(puzzle)
-    # time.sleep(.1)
-    return [dir]
-
-def move_tile_to_line(line: int, tile: int, puzzle: list[list[int]]) -> list[str]:
-    global empty_idx, tile_idx
-    insts = []
-
-    if tile_idx[0] < len(puzzle) - 1:
-        off = 1
-    else:
-        off = -1
-    while empty_idx[0] < tile_idx[0] + off:
-        insts += move_empty('d', puzzle)
-    while empty_idx[0] > tile_idx[0] + off:
-        insts += move_empty('u', puzzle)
-    while empty_idx[1] < tile_idx[1]:
-        insts += move_empty('r', puzzle)
-    while empty_idx[1] > tile_idx[1]:
-        insts += move_empty('l', puzzle)
-    if off == -1:
-        insts += move_empty('d', puzzle)
-        tile_idx[0] -= 1
-
-    diff = tile_idx[0] - line
-    for i in range(diff):
-        if tile_idx[1] < tile - 1 - line * len(puzzle):
-            insts += move_empty('r', puzzle)
-            insts += move_empty('u', puzzle)
-            insts += move_empty('u', puzzle)
-            insts += move_empty('l', puzzle)
-        else:
-            insts += move_empty('l', puzzle)
-            insts += move_empty('u', puzzle)
-            insts += move_empty('u', puzzle)
-            insts += move_empty('r', puzzle)
-        insts += move_empty('d', puzzle)
-
-    return insts
-
-    if tile_idx[0] < line - 1:
-        print(f'Tile {tile} is in line {tile_idx[0]} (too high)')
-        raise SystemExit(9)
-    elif tile_idx[0] == line - 1:
-        while empty_idx[0] < line:
-            insts += move_empty('d', puzzle)
-        while empty_idx[0] > line:
-            insts += move_empty('u', puzzle)
-        while empty_idx[1] < tile_idx[1]:
-            insts += move_empty('r', puzzle)
-        while empty_idx[1] > tile_idx[1]:
-            insts += move_empty('l', puzzle)
-        insts += move_empty('u', puzzle)
-        if tile_idx[1] == len(puzzle) - 1:
-            insts += move_empty('l', puzzle)
-            insts += move_empty('d', puzzle)
-            insts += move_empty('d', puzzle)
-            insts += move_empty('r', puzzle)
-        else:
-            insts += move_empty('r', puzzle)
-            insts += move_empty('d', puzzle)
-            insts += move_empty('d', puzzle)
-            insts += move_empty('l', puzzle)
-        return insts
-    elif tile_idx[0] == line:
-        while empty_idx[0] < tile_idx[0] + 1:
-            insts += move_empty('d', puzzle)
-        while empty_idx[0] > tile_idx[0] + 1:
-            insts += move_empty('u', puzzle)
-        while empty_idx[1] < tile_idx[1]:
-            insts += move_empty('r', puzzle)
-        while empty_idx[1] > tile_idx[1]:
-            insts += move_empty('l', puzzle)
-        return insts
-
-    if empty_idx[1] == tile_idx[1] and empty_idx[0] > tile_idx[0]:
-        if empty_idx[1] == len(puzzle) - 1:
-            insts += move_empty('l', puzzle)
-        else:
-            insts += move_empty('r', puzzle)
-
-    if tile_idx[1] < tile - 1 - line * len(puzzle):
-        if empty_idx[1] < len(puzzle) - 1:
-            insts += move_empty('r', puzzle)
-        while empty_idx[0] < tile_idx[0]:
-            insts += move_empty('d', puzzle)
-        while empty_idx[0] > tile_idx[0]:
-            insts += move_empty('u', puzzle)
-        while empty_idx[1] < tile_idx[1] + 1:
-            insts += move_empty('r', puzzle)
-        while empty_idx[1] > tile_idx[1] + 1:
-            insts += move_empty('l', puzzle)
-        diff = (tile - 1 - line * len(puzzle)) - tile_idx[1]
-        for i in range(diff):
-            insts += move_empty('l', puzzle)
-            tile_idx[1] += 1
-            if tile_idx[0] == len(puzzle) - 1:
-                insts += move_empty('u', puzzle)
-                insts += move_empty('r', puzzle)
-                insts += move_empty('r', puzzle)
-                insts += move_empty('d', puzzle)
-            else:
-                insts += move_empty('d', puzzle)
-                insts += move_empty('r', puzzle)
-                insts += move_empty('r', puzzle)
-                insts += move_empty('u', puzzle)
-
-    while empty_idx[0] < tile_idx[0] - 1:
-        insts += move_empty('d', puzzle)
-    while empty_idx[0] > tile_idx[0] - 1:
-        insts += move_empty('u', puzzle)
-
-    while empty_idx[1] < tile_idx[1]:
-        insts += move_empty('r', puzzle)
-    while empty_idx[1] > tile_idx[1]:
-        insts += move_empty('l', puzzle)
-
-    diff = tile_idx[0] - line
-    for i in range(diff):
-        insts += move_empty('d', puzzle)
-        if i < diff - 1:
-            if tile_idx[1] == tile - 1 - line * len(puzzle):
-                insts += move_empty('r', puzzle)
-                insts += move_empty('u', puzzle)
-                insts += move_empty('u', puzzle)
-                insts += move_empty('l', puzzle)
-            else:
-                insts += move_empty('l', puzzle)
-                insts += move_empty('u', puzzle)
-                insts += move_empty('u', puzzle)
-                insts += move_empty('r', puzzle)
-
-    return insts
-
-def move_tile_left(line: int, tile: int, puzzle: list[list[int]]) -> list[str]:
-    global empty_idx, tile_idx
-    diff = tile_idx[1] - (tile - line * len(puzzle) - 1)
-    insts = []
-    if diff > 0:
-        insts += move_empty('l', puzzle)
-        insts += move_empty('u', puzzle)
-        for i in range(diff):
-            insts += move_empty('r', puzzle)
-            if i < diff - 1:
-                insts += move_empty('d', puzzle)
-                insts += move_empty('l', puzzle)
-                insts += move_empty('l', puzzle)
-                insts += move_empty('u', puzzle)
-            else:
-                insts += move_empty('d', puzzle)
-                insts += move_empty('l', puzzle)
-    elif diff < 0:
-        diff = abs(diff)
-        insts += move_empty('r', puzzle)
-        insts += move_empty('u', puzzle)
-        for i in range(diff):
-            insts += move_empty('l', puzzle)
-            if i < diff - 1:
-                insts += move_empty('d', puzzle)
-                insts += move_empty('r', puzzle)
-                insts += move_empty('r', puzzle)
-                insts += move_empty('u', puzzle)
-            else:
-                insts += move_empty('d', puzzle)
-                insts += move_empty('r', puzzle)
-    return insts
-
-def move_tile_very_right(line: int, tile: int, puzzle: list[list[int]]) -> list[str]:
-    global empty_idx, tile_idx
-    diff = tile_idx[1] - (tile - line * len(puzzle) - 1)
-    insts = []
-    if diff > 0:
-        print(f"Tile can't be outside square, something's off ({tile_idx=}, {tile - line * len(puzzle) - 1=}")
-        raise SystemExit(11)
-    elif diff < 0:
-        diff = abs(diff)
-        insts += move_empty('r', puzzle)
-        insts += move_empty('u', puzzle)
-        for i in range(diff):
-            insts += move_empty('l', puzzle)
-            if i < diff - 1:
-                insts += move_empty('d', puzzle)
-                insts += move_empty('r', puzzle)
-                insts += move_empty('r', puzzle)
-                insts += move_empty('u', puzzle)
-            else:
-                insts += move_empty('d', puzzle)
-                insts += move_empty('r', puzzle)
-    return insts
-
-def solve_n_minus_2_line(line: int, puzzle: list[list[int]]) -> list[str]:
-    global empty_idx, tile_idx
-    insts = []
-    for i in range(1, len(puzzle)):
-        print(f'Solving tile {i + line * len(puzzle)}')
-        get_idxs(i + line * len(puzzle))
-        if tile_idx[0] * len(puzzle) + tile_idx[1] == i + line * len(puzzle) - 1:
-            continue
-        insts += move_tile_to_line(line, i + line * len(puzzle), puzzle)
-        insts += move_tile_left(line, i + line * len(puzzle), puzzle)
-    return insts
-
-def solve_last_tile_in_line(line: int, puzzle: list[list[int]]) -> list[str]:
-    global empty_idx, tile_idx
-    insts = []
-    insts += move_empty('r', puzzle)
-    insts += move_empty('u', puzzle)
-    insts += move_empty('l', puzzle)
-    insts += move_empty('d', puzzle)
-    get_idxs(len(puzzle) + line * len(puzzle))
-    if tile_idx[0] == empty_idx[0] - 1 and tile_idx[1] == empty_idx[1]:
-        print('Edge case! Last tile in line was at unfortunate position')
-        raise SystemExit(10)
-    print('moving tile to line')
-    insts += move_tile_to_line(line + 1, len(puzzle) + line * len(puzzle), puzzle)
-    print('moving tile very right')
-    insts += move_tile_very_right(line, len(puzzle) + line * len(puzzle), puzzle)
-    insts += move_empty('l', puzzle)
-    insts += move_empty('u', puzzle)
-    insts += move_empty('u', puzzle)
-    insts += move_empty('r', puzzle)
-    insts += move_empty('d', puzzle)
-    return insts
-
-def solve_line(line: int, puzzle: list[list[int]]) -> list[str]:
-    insts = solve_n_minus_2_line(line, puzzle)
-    insts += solve_last_tile_in_line(line, puzzle)
-    return insts
-
-def solve_n_minus_2(puzzle: list[list[int]]) -> list[str]:
-    insts = []
-    for line in range(len(puzzle) - 2):
-        insts += solve_line(line, puzzle)
-    return insts
-
-def solve_last_2(puzzle: list[list[int]]) -> list[str]:
-    pass
-
-def solve(puzzle: list[list[int]]) -> list[str]:
-    insts = solve_n_minus_2(puzzle)
-    # insts += solve_last_2(puzzle)
-    return insts
 
 if os.environ.get('DEBUG') == '1':
     def debug(function):
+        """Debug decorator (active)
+        """
         def inner(*args, **kwargs):
             print(f'Calling {function.__name__} with {args} {kwargs}')
             ret = function(*args, **kwargs)
@@ -275,6 +18,8 @@ if os.environ.get('DEBUG') == '1':
         return inner
 else:
     def debug(function):
+        """Debug decorator (inactive)
+        """
         return function
 
 class Puzzle:
@@ -704,6 +449,8 @@ class Puzzle:
 
     @debug
     def get_tiles(self, row: int) -> tuple[int, list[int], list[int], int, list[int], list[int]]:
+        """Return the indices, rows and columns of the penultimate and ultimate (last) tiles in the :row.
+        """
         P = (row + 1) * self.size - 1 # == Penultimate Tile Index
         PT = list(divmod(P - 1 if P != 0 else self.size ** 2 - 1, self.size)) # Penultimate Tile Target Row & Col
         # mutable list needed to pass it down to funcs as ref without creating bloated object or creating non-generic methods
@@ -720,6 +467,9 @@ class Puzzle:
 
     @debug
     def case_P_solved_L_anywhere(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
+        """Solve the case where the penultimate tile is solved and the last
+        tile is anywhere (except in penultimate tile's target position).
+        """
         self.focus_tile_right(PR) # go to right of P, this might move L
         self.move('l', L) # move P to the right
         PR[1] += 1 # reflect that
@@ -734,6 +484,9 @@ class Puzzle:
 
     @debug
     def case_P_solved_L_bottom_left(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
+        """Solve the case where the penultimate tile is solved and the last tile
+        is one to the bottom, one to the left of its target position (right below the penultimate tile).
+        """
         if self.empty_row == LT[0] + 1 and \
            self.empty_col < LR[1]: # E is in the same row and left to L?
             self.move('r' * (1 + LR[1] - self.empty_col), L) # move E all the way to the right (moving L one tile to its left)
@@ -755,6 +508,8 @@ class Puzzle:
 
     @debug
     def case_P_solved_L_one_below(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
+        """Solve the case where the penultimate tile is solved and the last tile is one below its target position.
+        """
         self.focus_tile_bottom(LR) # This might move L into its target row
         if LR == LT: # if that is the case, we're done
             return
@@ -763,6 +518,10 @@ class Puzzle:
 
     @debug
     def case_P_and_L_swapped(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
+        """Transform the case where the penultimate tile and the last tile are solved,
+        but swapped in their places, to the case where the penultimate tile is solved the
+        last tile is below the penultimate tile.
+        """
         # transform to a case handled later
 
         self.focus_tile_bottom(LR) # safe, won't move P or L
@@ -772,6 +531,9 @@ class Puzzle:
 
     @debug
     def case_P_in_target_of_L(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
+        """Solve the case where the penultimate tile is solved and the last tile is anywhere
+        (except in the penultimate tile's target position).
+        """
         # L won't be in P's target position, we checked that case already
         repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(LR, LT)
         self.align_tile_horizontally(L, LR, LT, repositioning_moves_horizontal) # won't move P
@@ -782,6 +544,9 @@ class Puzzle:
 
     @debug
     def case_L_solved_P_in_last_column(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
+        """Solve the case where the last tile is solved and the penultimate tile
+        is anywhere in the last column.
+        """
         if PR[0] < self.size - 1: # P is NOT in the last row?
             self.focus_tile_bottom(PR) # focus below P (which only works if it's not in the last row)
             PR[0] += 1 # we are below P. The next step is going to focus L, which is above. Thereforce, P will move down (increasing the row)
@@ -799,6 +564,10 @@ class Puzzle:
 
     @debug
     def case_P_anywhere(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int], row: int) -> None:
+        """Solve the default case where the penultimate tile is anywhere and the last tile is also anywhere.
+        Do this by forcing a state that can be handled by the other cases and call the solving function
+        recursively.
+        """
         PT[1] += 1 # goal is to move P to LT
         repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(PR, PT)
         self.align_tile_horizontally(P, PR, PT, repositioning_moves_horizontal) # TODO: prove that this will never cause one of the other cases
@@ -809,6 +578,9 @@ class Puzzle:
 
     @debug
     def case_P_solved(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
+        """Solve the case where the penultimate tile is solved and the last tile
+        is anywhere.
+        """
         if LR == LT: # L is also in correct position? Well, then we're done
             return
 
