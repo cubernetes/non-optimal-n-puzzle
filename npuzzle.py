@@ -787,11 +787,8 @@ if __name__ == '__main__':
     puzzle = Puzzle(open(0), print_after_move=False, clear_before_print=False, delay=0)
     elapsed_seconds = timeit.timeit('puzzle.solve()', globals=globals(), number=1)
 
-    # print(f'Elapsed seconds: {elapsed_seconds:.6f}')
     print(f'Time: {elapsed_seconds:.6f}s, Moves: {len(puzzle.moves)}', file=sys.stderr, flush=True)
-    # print('Solution:')
     print(''.join(puzzle.moves))
-    # print(len(puzzle.moves))
 
     if len(puzzle.moves) == 0 and puzzle.is_solvable:
         raise SystemExit(1)
