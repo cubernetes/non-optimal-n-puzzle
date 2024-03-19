@@ -703,10 +703,7 @@ class Puzzle:
             self.align_tile_vertically(tile, tile_real_row_col, tile_target_row_col, repositioning_moves_vertical)
 
     @debug
-    def solve_row_last_2_tiles(self, row: int) -> None:
-        """Solve last 2 tiles of a particular :row.
-        Requires that all previous tiles in that row are solved.
-        """
+    def get_tiles(self, row: int) -> tuple[int, list[int], list[int], int, list[int], list[int]]:
         P = (row + 1) * self.size - 1 # == Penultimate Tile Index
         PT = list(divmod(P - 1 if P != 0 else self.size ** 2 - 1, self.size)) # Penultimate Tile Target Row & Col
         # mutable list needed to pass it down to funcs as ref without creating bloated object or creating non-generic methods
@@ -719,101 +716,133 @@ class Puzzle:
 
         # E == empty tile
 
+        return P, PT, PR, L, LT, LR
+
+    @debug
+    def case_P_solved_L_anywhere(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
+        self.focus_tile_right(PR) # go to right of P, this might move L
+        self.move('l', L) # move P to the right
+        PR[1] += 1 # reflect that
+        # TODO: prove that L will never be at (PT[0]+1, PT[1])
+        LR[0], LR[1] = self._get_tile_pos(L) # get L in case it changed, also splitting it to update the references
+        repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(LR, LT) # determine moving strategory
+        self.align_tile_horizontally(L, LR, LT, repositioning_moves_horizontal) # move L to its column
+        LT[0] += 1 # increase target row by one, because L is supposed to be right below the new P
+        self.align_tile_vertically(L, LR, LT, 'luur') # move L up, right below P
+        self.focus_tile_left(PR) # go to left of P
+        self.move('rd', L) # solve the row
+
+    @debug
+    def case_P_solved_L_bottom_left(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
+        if self.empty_row == LT[0] + 1 and \
+           self.empty_col < LR[1]: # E is in the same row and left to L?
+            self.move('r' * (1 + LR[1] - self.empty_col), L) # move E all the way to the right (moving L one tile to its left)
+            self.move('uldldrrulurd', L) # solve the row
+
+        else: # E is not (in the same row and left to L)
+            if self.empty_row <= LT[0] + 1 and \
+               self.empty_col > LR[1]: # E is in the same row or above the row of L and to the right of L?
+                self.move('d' * (LT[0] + 1 - self.empty_row + 1), L) # move E down until its row is right below L
+
+            self.move('u' * (self.empty_row - LT[0] - 2), L) # if we're too low, move E up until we're right below L
+            if self.empty_col > LR[1]: # E is right of L
+                self.move('l' * (self.empty_col - LR[1]), L) # move E left
+
+            elif self.empty_col < LR[1]: # E is left of L
+                self.move('r' * (LR[1] - self.empty_col), L) # move E right
+
+            self.move('urulddrulurd', L) # solve the row
+
+    @debug
+    def case_P_solved_L_one_below(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
+        self.focus_tile_bottom(LR) # This might move L into its target row
+        if LR == LT: # if that is the case, we're done
+            return
+
+        self.move('uuldrdluurd', L) # solve the row
+
+    @debug
+    def case_P_and_L_swapped(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
+        # transform to a case handled later
+
+        self.focus_tile_bottom(LR) # safe, won't move P or L
+        self.move('ur', L) # This depends on the previous action not moving P or L
+        LR[0] += 1 # P and L have have moved, we must reflect that
+        PR[1] -= 1
+
+    @debug
+    def case_P_in_target_of_L(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
+        # L won't be in P's target position, we checked that case already
+        repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(LR, LT)
+        self.align_tile_horizontally(L, LR, LT, repositioning_moves_horizontal) # won't move P
+        LT[0] += 1 # we want L to be right below P
+        self.align_tile_vertically(L, LR, LT, 'luur') # won't move P
+        self.focus_tile_bottom(LR) # in case the vertical alignment didn't happen, we might be at a (not really) random location, so ensure focus below R (will not move P)
+        self.move('luurd', L) # solve the row
+
+    @debug
+    def case_L_solved_P_in_last_column(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
+        if PR[0] < self.size - 1: # P is NOT in the last row?
+            self.focus_tile_bottom(PR) # focus below P (which only works if it's not in the last row)
+            PR[0] += 1 # we are below P. The next step is going to focus L, which is above. Thereforce, P will move down (increasing the row)
+
+        self.focus_tile_bottom(LR)
+        self.move('uldr', L) # put L bottom-left (diagonally) of its target position
+        self.align_tile_vertically(P, PR, PT, 'luur') # move P to LT
+        # now L is either at 1. (LT[0]+2, LT[1]-1) or 2. (LT[0]+2, LT[1])
+        self.move('d', L)
+        if self.puzzle[LT[0] + 2][LT[1]-1] == L: # if L is at (LT[0]+2, LT[1]-1)
+            self.move('lurd', L) # synchronize, now L will be at the same position that it would be if it was at 2. to begin with
+        self.move('luurd', L) # solve the row
+        # TOOD: Remove
+        assert self.puzzle[PT[0]][PT[1]] == P and self.puzzle[LT[0]][LT[1]] == L, 'row is not solved'
+
+    @debug
+    def case_P_anywhere(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int], row: int) -> None:
+        PT[1] += 1 # goal is to move P to LT
+        repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(PR, PT)
+        self.align_tile_horizontally(P, PR, PT, repositioning_moves_horizontal) # TODO: prove that this will never cause one of the other cases
+        if LR != LT:
+            self.align_tile_vertically(P, PR, PT, 'luur') # this is safe and won't put L into a weird place
+        # no we are in a case that is already handled above (P being in LT)
+        self.solve_row_last_2_tiles(row)
+
+    @debug
+    def case_P_solved(self, P: int, L: int, PR: list[int], LR: list[int], PT: list[int], LT: list[int]) -> None:
+        if LR == LT: # L is also in correct position? Well, then we're done
+            return
+
+        elif LR[0] == LT[0] + 1 and \
+             LR[1] == LT[1]: # L is in correct column, but one below its target row?
+            self.case_P_solved_L_one_below(P, L, PR, LR, PT, LT)
+
+        elif LR[0] == LT[0] + 1 and \
+             LR[1] == LT[1] - 1: # L is bottom-left (diagonally) of its target position?
+            self.case_P_solved_L_bottom_left(P, L, PR, LR, PT, LT)
+
+        else: # L is anywhere else?
+            self.case_P_solved_L_anywhere(P, L, PR, LR, PT, LT)
+
+    @debug
+    def solve_row_last_2_tiles(self, row: int) -> None:
+        """Solve last 2 tiles of a particular :row.
+        Requires that all previous tiles in that row are solved.
+        """
+        P, PT, PR, L, LT, LR = self.get_tiles(row) # if python only had zero-cost abstrations...
+
         if PR == LT and \
            LR == PT: # last 2 tiles are swapped?
-            # transform to a case handled below
-            print('Branch 1')
-
-            self.focus_tile_bottom(LR) # safe, won't move P or L
-            self.move('ur', L) # This depends on the previous action not moving P or L
-            LR[0] += 1 # P and L have have moved, we must reflect that
-            PR[1] -= 1
+               self.case_P_and_L_swapped(P, L, PR, LR, PT, LT) # always passing 6 vars to avoid deconstructing them all the time
 
         if PR == PT: # P is in correct position?
-            print('Branch 2')
-            if LR == LT: # L is also in correct position? Well, then we're done
-                return
-
-            elif LR[0] == LT[0] + 1 and \
-                 LR[1] == LT[1]: # L is in correct column, but one below its target row?
-                self.focus_tile_bottom(LR) # This might move L into its target row
-                if LR == LT: # if that is the case, we're done
-                    return
-
-                self.move('uuldrdluurd', L) # solve the row
-
-            elif LR[0] == LT[0] + 1 and \
-                 LR[1] == LT[1] - 1: # L is bottom-left (diagonally) of its target position?
-                if self.empty_row == LT[0] + 1 and \
-                   self.empty_col < LR[1]: # E is in the same row and left to L?
-                    self.move('r' * (1 + LR[1] - self.empty_col), L) # move E all the way to the right (moving L one tile to its left)
-                    self.move('uldldrrulurd', L) # solve the row
-
-                else: # E is not (in the same row and left to L)
-                    if self.empty_row <= LT[0] + 1 and \
-                       self.empty_col > LR[1]: # E is in the same row or above the row of L and to the right of L?
-                        self.move('d' * (LT[0] + 1 - self.empty_row + 1), L) # move E down until its row is right below L
-
-                    self.move('u' * (self.empty_row - LT[0] - 2), L) # if we're too low, move E up until we're right below L
-                    if self.empty_col > LR[1]: # E is right of L
-                        self.move('l' * (self.empty_col - LR[1]), L) # move E left
-
-                    elif self.empty_col < LR[1]: # E is left of L
-                        self.move('r' * (LR[1] - self.empty_col), L) # move E right
-
-                    self.move('urulddrulurd', L) # solve the row
-
-            else: # L is anywhere else?
-                self.focus_tile_right(PR) # go to right of P, this might move L
-                self.move('l', L) # move P to the right
-                PR[1] += 1 # reflect that
-                # TODO: prove that L will never be at (PT[0]+1, PT[1])
-                LR = list(self._get_tile_pos(L)) # get L in case it changed
-                repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(LR, LT) # determine moving strategory
-                self.align_tile_horizontally(L, LR, LT, repositioning_moves_horizontal) # move L to its column
-                LT[0] += 1 # increase target row by one, because L is supposed to be right below the new P
-                self.align_tile_vertically(L, LR, LT, 'luur') # move L up, right below P
-                self.focus_tile_left(PR) # go to left of P
-                self.move('rd', L) # solve the row
-
+            self.case_P_solved(P, L, PR, LR, PT, LT)
         elif PR == LT: # P is in L's target position?
-            print('Branch 3')
-            # L won't be in P's target position, we checked that case already
-            repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(LR, LT)
-            self.align_tile_horizontally(L, LR, LT, repositioning_moves_horizontal) # won't move P
-            LT[0] += 1 # we want L to be right below P
-            self.align_tile_vertically(L, LR, LT, 'luur') # won't move P
-            self.focus_tile_bottom(LR) # in case the vertical alignment didn't happen, we might be at a (not really) random location, so ensure focus below R (will not move P)
-            self.move('luurd', L) # solve the row
-
+            self.case_P_in_target_of_L(P, L, PR, LR, PT, LT)
         elif PR[1] == self.size - 1 and \
              LR == LT: # L is solved and P is somewhere in the last column?
-            print('Branch 4')
-            if PR[0] < self.size - 1: # P is NOT in the last row?
-                self.focus_tile_bottom(PR) # focus below P (which only works if it's not in the last row)
-                PR[0] += 1 # we are below P. The next step is going to focus L, which is above. Thereforce, P will move down (increasing the row)
-
-            self.focus_tile_bottom(LR)
-            self.move('uldr', L) # put L bottom-left (diagonally) of its target position
-            self.align_tile_vertically(P, PR, PT, 'luur') # move P to LT
-            # now L is either at (LT[0]+2, LT[1]-1) or (LT[0]+2, LT[1])
-            self.move('d', L)
-            if self.puzzle[LT[0] + 2][LT[1]-1] == L:
-                self.move('lurd', L)
-            self.move('luurd', L)
-            # TOOD: Remove
-            assert self.puzzle[PT[0]][PT[1]] == P and self.puzzle[LT[0]][LT[1]] == L, 'row is not solved'
-            # assert False, 'row is solved'
-
-        else:
-            print('Branch 5')
-            PT[1] += 1 # goal is to move P to LT
-            repositioning_moves_horizontal = self.get_horizontal_repositioning_moves(PR, PT)
-            self.align_tile_horizontally(P, PR, PT, repositioning_moves_horizontal) # TODO: prove that this will never cause one of the other cases
-            if LR != LT:
-                self.align_tile_vertically(P, PR, PT, 'luur') # this is safe and won't put L into a weird place
-            # no we are in a case that is already handled above (P being in LT)
-            self.solve_row_last_2_tiles(row)
+            self.case_L_solved_P_in_last_column(P, L, PR, LR, PT, LT)
+        else: # P is anywhere else, or the last column if L is not solved
+            self.case_P_anywhere(P, L, PR, LR, PT, LT, row)
 
     @debug
     def solve_n_minus_2_rows(self) -> None:
@@ -867,7 +896,7 @@ class Puzzle:
         self.solve_last_2_rows()
 
 if __name__ == '__main__':
-    puzzle = Puzzle(open(0), print_after_move=True, delay=0)
+    puzzle = Puzzle(open(0), print_after_move=False, delay=0)
     elapsed_seconds = timeit.timeit('puzzle.solve()', globals=globals(), number=1)
     print(f'Elapsed seconds: {elapsed_seconds:.6f}')
     print('Solution:')
