@@ -10,7 +10,7 @@ echo "Hello! Please be patient, the downloading and extraction of pypy might tak
 rm -f -- "${pypy}${ext}"
 rm -f ./pypy3.10
 rm -f ./libpypy3.10-c.so
-wget -q "${url}"
+wget --show-progress -q "${url}"
 
 tar -xf ./"${pypy}${ext}"
 rm -- "${pypy}${ext}"
