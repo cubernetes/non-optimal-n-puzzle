@@ -123,24 +123,15 @@ class Puzzle:
         for i, row in enumerate(self.puzzle):
             for j, col in enumerate(row):
                 if col == tile:
-                    print(end=f'\033\x5b30;43m{col: >2} \033\x5bm')
+                    print(end=f'\033\x5b30;43m{col: >4} \033\x5bm')
                 elif col == i * self.size + j + 1 and col < tile:
-                    print(end=f'\033\x5b30;42m{col: >2} \033\x5bm')
+                    print(end=f'\033\x5b30;42m{col: >4} \033\x5bm')
                 elif col == 0:
-                    print(end=f'\033\x5b30;41m{col: >2} \033\x5bm')
+                    print(end=f'\033\x5b30;41m{col: >4} \033\x5bm')
                 else:
-                    print(end=f'{col: >2} ')
+                    print(end=f'{col: >4} ')
             print()
         print()
-
-    def print_moves(self) -> None:
-        """Print list of moves as one string
-        Takes O(n**2).
-        """
-        if self.moves:
-            print(''.join(self.moves))
-        else:
-            print('Empty list of moves')
 
     def error(self, msg: str, exit_code: int) -> None:
         """Print error :msg to standard output and exit process with non-zero
@@ -636,7 +627,7 @@ if __name__ == '__main__':
     puzzle = Puzzle(open(0))
     elapsed_seconds = timeit.timeit('puzzle.solve()', globals=globals(), number=1)
 
-    print(f'Time: {elapsed_seconds:.6f}s, Moves: {len(puzzle.moves)}', file=sys.stderr, flush=True)
+    print(f'Size: {puzzle.size}, Time: {elapsed_seconds:.6f}s, Moves: {len(puzzle.moves)}', file=sys.stderr, flush=True)
     print(''.join(puzzle.moves))
 
     if len(puzzle.moves) == 0 and puzzle.is_solvable:

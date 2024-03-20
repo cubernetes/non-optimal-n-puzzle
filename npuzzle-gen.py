@@ -34,9 +34,17 @@ def make_puzzle(s, solvable, iterations):
 
 def make_goal(s):
 	ts = s*s
+	# Sorted puzzle
 	puzzle = [i + 1 for i in range(ts)]
 	puzzle[-1] = 0
+
+	# Reversed puzzle
+	puzzle = [ts - i - 1 for i in range(ts)]
+	if not ts & 1:
+		puzzle[-3], puzzle[-2] = puzzle[-2], puzzle[-3]
+
 	return puzzle
+
 	puzzle = [-1 for i in range(ts)]
 	cur = 1
 	x = 0
