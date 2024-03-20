@@ -7,22 +7,22 @@ ext=".tar.bz2"
 pypy="$(basename -s "${ext}" -- "${url}")"
 
 rm -f -- "${pypy}${ext}"
-rm -vf ./pypy3.10
-rm -vf ./libpypy3.10-c.so
-wget -v "${url}"
+rm -f ./pypy3.10
+rm -f ./libpypy3.10-c.so
+wget -q "${url}"
 
 tar -xf ./"${pypy}${ext}"
-rm -v -- "${pypy}${ext}"
-mkdir -pv -- "./pypylib/"
-mv -v -- "${pypy}"/bin/pypy3.10 ./pypy3.10
-mv -v -- "${pypy}"/bin/libpypy3.10-c.so ./pypylib/libpypy3.10-c.so
-mv -v -- "${pypy}"/lib/*.so* ./pypylib/
+rm -- "${pypy}${ext}"
+mkdir -p -- "./pypylib/"
+mv -- "${pypy}"/bin/pypy3.10 ./pypy3.10
+mv -- "${pypy}"/bin/libpypy3.10-c.so ./pypylib/libpypy3.10-c.so
+mv -- "${pypy}"/lib/*.so* ./pypylib/
 rm -rf -- "${pypy}"
 
 export LD_LIBRARY_PATH="${LD_LIBRARY_PATH-}:/lib:/lib64:/usr/lib:/usr/lib64:/usr/local/lib:/usr/local/lib64:${PWD}/pypylib"
 
 bash
-rm -vf ./pypy3.10
-rm -vf ./libpypy3.10-c.so
+rm -f ./pypy3.10
+rm -f ./libpypy3.10-c.so
 rm -f ./puzzle
-rm -rvf -- "./pypylib/"
+rm -rf -- "./pypylib/"
