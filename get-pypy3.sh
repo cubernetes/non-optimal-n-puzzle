@@ -6,6 +6,7 @@ url="https://downloads.python.org/pypy/pypy3.10-v7.3.15-linux64.tar.bz2"
 ext=".tar.bz2"
 pypy="$(basename -s "${ext}" -- "${url}")"
 
+echo "Hello! Please be patient, the downloading and extraction of pypy might take a few seconds."
 rm -f -- "${pypy}${ext}"
 rm -f ./pypy3.10
 rm -f ./libpypy3.10-c.so
@@ -21,6 +22,7 @@ rm -rf -- "${pypy}"
 
 export LD_LIBRARY_PATH="${LD_LIBRARY_PATH-}:/lib:/lib64:/usr/lib:/usr/lib64:/usr/local/lib:/usr/local/lib64:${PWD}/pypylib"
 
+echo "Done! Starting a child shell (for the correct environment). When you exit this shell, pypy will be deleted from the current directory."
 bash
 rm -f ./pypy3.10
 rm -f ./libpypy3.10-c.so
