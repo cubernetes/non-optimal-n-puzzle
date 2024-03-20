@@ -22,9 +22,14 @@ rm -rf -- "${pypy}"
 
 export LD_LIBRARY_PATH="${LD_LIBRARY_PATH-}:/lib:/lib64:/usr/lib:/usr/lib64:/usr/local/lib:/usr/local/lib64:${PWD}/pypylib"
 
+function cleanup () {
+	rm -f ./pypy3.10
+	rm -f ./libpypy3.10-c.so
+	rm -f ./puzzle
+	rm -rf -- "./pypylib/"
+}
+
+trap cleanup EXIT
+
 echo "Done! Starting a child shell (for the correct environment). When you exit this shell, pypy will be deleted from the current directory."
 bash
-rm -f ./pypy3.10
-rm -f ./libpypy3.10-c.so
-rm -f ./puzzle
-rm -rf -- "./pypylib/"
