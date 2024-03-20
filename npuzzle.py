@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Preferably use `pypy3.10 --jit vec=1`
 
 import sys
 import time
@@ -392,6 +393,10 @@ class Puzzle:
     def solve_row_last_2_tiles(self, row: int) -> None:
         """Solve last 2 tiles of a particular :row.
         Requires that all previous tiles in that row are solved.
+
+        Note: Inlined all the functions for speeeeeeed (and there was a bug that
+        never happened, namely all those early returns never actually returned
+        when they were abstracted away in a separate function).
         """
         P = (row + 1) * self.size - 1 # == Penultimate Tile Index
         PT = list(divmod(P - 1 if P != 0 else self.size ** 2 - 1, self.size)) # Penultimate Tile Target Row & Col
@@ -622,6 +627,16 @@ class Puzzle:
             return
         self.solve_n_minus_2_rows()
         self.solve_last_2_rows()
+        # Saves roughly 20% on 5x5, 10% on 10x10, and roughly 1% on 100x100.
+        # For 100x100, the time to solve would increase from 1.3 to 1.9 seconds.
+        # prev = ''
+        # moves = ''.join(self.moves)
+        # first = len(self.moves)
+        # while len(moves) != len(prev):
+        #     prev = moves
+        #     moves = moves.replace('rl', '').replace('lr', '').replace('ud', '').replace('du', '')
+        # self.moves = list(moves)
+        # print(f'Saving {first - len(self.moves)} moves (\033\x5b31m{100 - len(self.moves) / first * 100:.2f}%\033\x5bm)', file=sys.stderr)
 
 if __name__ == '__main__':
     puzzle = Puzzle(open(0))
